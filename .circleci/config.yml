@@ -1,0 +1,87 @@
+version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli@0.1.13
+jobs:
+  build:
+    docker:
+      - image: circleci/node:latest
+    executor:
+      name: aws-cli/default
+      python-version: "3.5"
+    steps:
+      - checkout
+      - run: ls -alh
+      - run:
+          name: update-npm
+          command: 'sudo npm install -g npm@latest'
+      - run:
+          name: install-node-dependencies
+          command: npm install
+      - save_cache: # special step to save the dependency cache
+          key: dependency-cache-{{ checksum "nodejs/package.json" }}
+          paths:
+            - ./node_modules
+      - run: # run tests
+          name: run npm test
+          command: npm test
+          environment:
+            JEST_JUNIT_OUTPUT: "reports/junit/junit.xml"
+      - save_cache: # special step to save the dependency cache
+          key: dependency-cache-{{ checksum "nodejs/package.json" }}
+          paths:
+            - ./node_modules
+      - store_artifacts: # special step to save test results as as artifact
+          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: reports/junit
+          prefix: tests
+      - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: coverage
+          prefix: coverage
+      - store_test_results: # for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: reports/junit
+      - aws-cli/install
+      - aws-cli/configure
+      - run:
+          name: install-node-dependencies
+          command: npm build
+      # - run:
+      #     name: Deploy Zip File to lambda function S3 Bucket
+      #     command: |
+      #       if [[ ! -z $LAMBDA_S3_BUCKET_NAME ]]; then
+      #         $(aws s3api head-bucket --bucket $LAMBDA_S3_BUCKET_NAME);
+      #         if [[ $? == 0 ]]; then
+      #            aws s3 cp nodejs/build/$LAMBDA_FUNCTION_NAME.${CIRCLE_BRANCH:-local}.zip \
+      #            s3://$LAMBDA_S3_BUCKET_NAME/$LAMBDA_S3_PREFIX$LAMBDA_FUNCTION_NAME.${CIRCLE_BRANCH:-local}.zip;
+      #         else
+      #            echo "bucket does not exist or permission is not there to view it.";
+      #            exit 1;
+      #         fi
+      #       fi
+      # - run:
+      #     name: Deploy Lambda Function to AWS
+      #     command: |
+      #       aws cloudformation deploy --stack-name $LAMBDA_FUNCTION_NAME-${CIRCLE_BRANCH:-local} \
+      #       --template-file CloudFormation/ACM.json \
+      #       --parameter-overrides \
+      #       "lambdaBucketName=$LAMBDA_S3_BUCKET_NAME" \
+      #       "lambdaZipPath=$LAMBDA_S3_PREFIX$LAMBDA_FUNCTION_NAME.${CIRCLE_BRANCH:-local}.zip" \
+      #       "lambdaFunctionName=$LAMBDA_FUNCTION_NAME" \
+      #       "lambdaZipObjectVersion=$(aws s3api list-object-versions \
+      #       --bucket $LAMBDA_S3_BUCKET_NAME \
+      #       --prefix $LAMBDA_S3_PREFIX$LAMBDA_FUNCTION_NAME.${CIRCLE_BRANCH:-local}.zip \
+      #       --max-items 1 | jq -r '.Versions[0].VersionId')" \
+      #       "domainName=$ROUTE53_DOMAIN_NAME" \
+      #       "siteName=$CLOUDFRONT_SITE_NAME" \
+      #       --capabilities CAPABILITY_IAM
+      # - run:
+      #     name: Clean up
+      #     command: cd nodejs && npm run cleanup
+# workflows:
+#   version: 2
+#   build-CloudFrontJWTValidator:
+#     jobs:
+#       - build
+#       - aws-cli:
+#           requires:
+#             - build
+#           context: aws
