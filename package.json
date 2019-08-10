@@ -3,8 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@octokit/rest": "^16.28.7",
+    "github-api": "^3.2.2",
+    "jsonwebtoken": "^8.5.1",
+    "prompts": "^2.1.0",
+    "query-string": "^6.8.2",
     "react": "^16.8.6",
+    "react-cookie": "^4.0.1",
     "react-dom": "^16.8.6",
+    "react-router-dom": "^5.0.1",
     "react-scripts": "3.0.1"
   },
   "scripts": {
@@ -28,5 +35,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "express-generator": "^4.16.1",
+    "http-proxy-middleware": "^0.19.1"
   }
 }
