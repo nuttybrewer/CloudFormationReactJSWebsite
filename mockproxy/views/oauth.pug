@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1= title
+  form(method='POST' action=(action))
+    div.form-group
+      label(for='token') Token:
+      input#token.form-control(type='text', placeholder='Encoded JWT Token' name='token' value='')
+      input#provider.form-control(type='hidden', name='provider' value=(provider))
+      button.btn.btn-primary(type='submit') Submit
