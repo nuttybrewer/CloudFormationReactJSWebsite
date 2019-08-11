@@ -1,5 +1,7 @@
 // Modified version of ini by Isaac Z. Schlueter and Contributors
 // https://github.com/npm/ini
+
+const util = require('util');
 exports.parse = exports.decode = decode
 
 exports.stringify = exports.encode = encode
@@ -30,7 +32,12 @@ function encode (obj, opt) {
     var val = obj[k]
     if (val && Array.isArray(val)) {
       val.forEach(function (item) {
-        out += safe(k + '[]') + separator + safe(item) + '\n'
+        if (opt.javapropertiesstyle) {
+          out += safe(k) + separator + safe(item) + '\n'
+        }
+        else {
+          out += safe(k + '[]') + separator + safe(item) + '\n'
+        }
       })
     } else if (val && typeof val === 'object') {
       children.push(k)
@@ -90,7 +97,8 @@ function decode (str) {
     switch (value) {
       case 'true':
       case 'false':
-      case 'null': value = JSON.parse(value)
+      case 'null': value = JSON.parse(value); break;
+      default:
     }
 
     // Convert keys with '[]' suffix to an array
@@ -101,6 +109,11 @@ function decode (str) {
       } else if (!Array.isArray(p[key])) {
         p[key] = [p[key]]
       }
+    }
+
+    // Check if the key already exists, if it does, then convert it to an Array
+    if (p[key] && !Array.isArray(p[key])) {
+      p[key] = [p[key]]
     }
 
     // safeguard against resetting a previously defined

@@ -10,7 +10,7 @@ class FieldExtractionTopConfig extends Component {
     this.state = {
       rawData: null,
       decodedData: null,
-      ini: null,
+      iniConfig: null,
       fetchingData: false
     }
   }
@@ -37,7 +37,7 @@ class FieldExtractionTopConfig extends Component {
       .then(raw => {
         const decodedData = new Buffer(raw.data.content, 'base64').toString('ascii');
         const iniConfig = ini.decode(decodedData);
-        this.setState({rawData: raw.data.content, decodedData: decodedData, ini: iniConfig, fetchingData: false});
+        this.setState({rawData: raw.data.content, decodedData: decodedData, iniConfig: iniConfig, fetchingData: false});
       }).catch(error => {
         this.setState({fetchingData: false})
         onGithubError(error);
@@ -55,10 +55,10 @@ class FieldExtractionTopConfig extends Component {
   }
 
   render() {
-    const { decodedData, fetchingData } = this.state;
-    if (!fetchingData && decodedData) {
+    const { fetchingData, iniConfig } = this.state;
+    if (!fetchingData && iniConfig) {
       return (
-        <Editor height="80vh" language="ini" value={decodedData}/>
+        <Editor height="75vh" language="ini" value={ini.encode(iniConfig, {javapropertiesstyle: true})}/>
       );
     }
     return ( <i>Loading...</i> );
