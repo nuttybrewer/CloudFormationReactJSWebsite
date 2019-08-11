@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import util from 'util';
 class GithubPanel extends Component {
   constructor(props) {
     super(props);

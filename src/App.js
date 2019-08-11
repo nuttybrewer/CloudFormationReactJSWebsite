@@ -4,12 +4,16 @@ import { instanceOf } from 'prop-types';
 import { BrowserRouter, Route, Redirect, Link } from 'react-router-dom'; // eslint-disable-line
 import { withCookies, Cookies } from 'react-cookie';
 import jsonwebtoken from 'jsonwebtoken';
+
+import { Container, Navbar, Nav} from 'react-bootstrap';
+
 // import logo from './logo.svg';
 import './App.css';
 import url from 'url';
 
 import MainCard from './components/MainCard';
-import GithubPanel from "./components/GithubPanel";
+// import GithubPanel from './components/GithubPanel';
+import FieldExtractionPanel from './components/FieldExtractionPanel';
 
 class App extends Component{
   static propTypes = {
@@ -79,36 +83,50 @@ class App extends Component{
 
     this.state = state;
   }
-
-  componentDidMount() {
-    const { sessiontoken, githubtoken } = this.state;
-    console.log("Session: " + sessiontoken);
-    console.log("Github: " + githubtoken);
-  }
+//  <p>
+//   <Link to="/">Home</Link>
+//   &nbsp;|&nbsp;
+//   <Link to="/github">Github</Link>
+// </p>
 
   render() {
     const { sessiontoken, githubtoken } = this.state;
     return (
-      <div>
+      <Container>
       { sessiontoken ?
       (
       <BrowserRouter>
         <div className="App">
-          <div className="topMenu">
-          <h1 className="App-title">Welcome to React</h1>
-          <p><Link to="/">Home</Link></p>
-          <p><Link to="/github">Github</Link></p>
-          </div>
-          <Route
-            exact
-            path="/"
-            render={(props) => <MainCard {...props} sessiontoken={sessiontoken} />}
-          />
-          <Route
-            exact
-            path="/github"
-            render={(props) => <GithubPanel {...props} githubtoken={githubtoken} />}
-          />
+          <header>
+            <Navbar collapseOnSelect expand="lg" bg="dark" variant="dark">
+              <Navbar.Brand>Portal</Navbar.Brand>
+              <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+              <Navbar.Collapse id="responsive-navbar-nav">
+                <Nav fill variant="pills">
+                  <Nav.Link as={Link} to="/">Home</Nav.Link>
+                  <Nav.Link as={Link} to="/github">Field Extraction Editor</Nav.Link>
+                </Nav>
+              </Navbar.Collapse>
+            </Navbar>
+          </header>
+          <main>
+          <Container fluid="true">
+            <Route
+              exact
+              path="/"
+              render={(props) => <MainCard {...props} sessiontoken={sessiontoken} />}
+            />
+            <Route
+              exact
+              path="/github"
+              render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} />}
+            />
+          </Container>
+        </main>
+
+        <footer class="footer mt-auto py-3">
+          Footer
+        </footer>
         </div>
       </BrowserRouter>
       )
@@ -117,7 +135,7 @@ class App extends Component{
         (<a href="/oauth/cognito/authorize">Please login to main app</a>)
       )
       }
-      </div>
+    </Container>
     );
   }
 }
