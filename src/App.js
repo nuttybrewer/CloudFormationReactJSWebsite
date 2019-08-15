@@ -4,9 +4,11 @@ import { instanceOf } from 'prop-types';
 import { BrowserRouter, Route, Redirect, Link } from 'react-router-dom'; // eslint-disable-line
 import { withCookies, Cookies } from 'react-cookie';
 import jsonwebtoken from 'jsonwebtoken';
+import { Modal, Button } from 'react-bootstrap';
 
-import { Container, Navbar, Nav} from 'react-bootstrap';
+import { Navbar, Nav} from 'react-bootstrap';
 
+import { FaSignOutAlt } from 'react-icons/fa';
 // import logo from './logo.svg';
 import './App.css';
 import url from 'url';
@@ -21,6 +23,7 @@ class App extends Component{
   };
   constructor(props) {
     super(props);
+    this.signOut = this.signOut.bind(this);
 
     // Hold our state prior to assigning it.
     var state = {};
@@ -44,13 +47,7 @@ class App extends Component{
           console.log("http detected")
           secure = false;
         }
-        console.log("Setting new sessiontoken");
-        try {
-          cookies.set('sessiontoken', sessiontoken, { domain: domain, secure: secure, path: '/', expires: new Date(token.payload.exp * 1000)});
-        }
-        catch(err) {
-          console.log("Error setting cookie " + err.message);
-        }
+        cookies.set('sessiontoken', sessiontoken, { domain: domain, secure: secure, path: '/', expires: new Date(token.payload.exp * 1000)});
         // Clear the address bar
         window.history.replaceState(null, null, window.location.pathname);
       }
@@ -83,6 +80,13 @@ class App extends Component{
 
     this.state = state;
   }
+
+  signOut() {
+    const { cookies } = this.props;
+    cookies.remove("sessiontoken");
+    sessionStorage.clear();
+    this.setState({githubtoken: null, sessiontoken: null})
+  }
 //  <p>
 //   <Link to="/">Home</Link>
 //   &nbsp;|&nbsp;
@@ -92,50 +96,53 @@ class App extends Component{
   render() {
     const { sessiontoken, githubtoken } = this.state;
     return (
-      <Container>
-      { sessiontoken ?
-      (
-      <BrowserRouter>
-        <div className="App">
-          <header>
-            <Navbar collapseOnSelect expand="lg" bg="dark" variant="dark">
-              <Navbar.Brand>Portal</Navbar.Brand>
-              <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-              <Navbar.Collapse id="responsive-navbar-nav">
-                <Nav fill variant="pills">
-                  <Nav.Link as={Link} to="/">Home</Nav.Link>
-                  <Nav.Link as={Link} to="/github">Field Extraction Editor</Nav.Link>
-                </Nav>
-              </Navbar.Collapse>
-            </Navbar>
-          </header>
-          <main>
-          <Container fluid="true">
-            <Route
-              exact
-              path="/"
-              render={(props) => <MainCard {...props} sessiontoken={sessiontoken} />}
-            />
-            <Route
-              exact
-              path="/github"
-              render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} />}
-            />
-          </Container>
-        </main>
-
-        <footer class="footer mt-auto py-3">
-          Footer
-        </footer>
-        </div>
-      </BrowserRouter>
-      )
-      :
-      (
-        (<a href="/oauth/cognito/authorize">Please login to main app</a>)
-      )
-      }
-    </Container>
+      <div>
+        { sessiontoken ?
+        (
+          <BrowserRouter>
+            <div>
+                <Navbar expand="lg" bg="dark" variant="dark">
+                  <Navbar.Brand>Portal</Navbar.Brand>
+                  <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+                  <Navbar.Collapse id="responsive-navbar-nav">
+                    <Nav className="mr-auto">
+                      <Nav.Link as={Link} to="/">Home</Nav.Link>
+                      <Nav.Link as={Link} to="/github">Field Extraction Editor</Nav.Link>
+                    </Nav>
+                  </Navbar.Collapse>
+                  <Button type="submit" variant="secondary" size="sm" onClick={this.signOut}>Sign Out <FaSignOutAlt/></Button>
+                </Navbar>
+                <Route
+                  exact
+                  path="/"
+                  render={(props) => <MainCard {...props}  />}
+                />
+                <Route
+                  exact
+                  path="/github"
+                  render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} />}
+                />
+            </div>
+          </BrowserRouter>
+        )
+        :
+        (
+          <Modal show="true" >
+            <Modal.Header >
+              <Modal.Title>Portal App</Modal.Title>
+            </Modal.Header>
+              <Modal.Body>
+                <h3 className="loginPrompt">This App Requires an account</h3>
+              </Modal.Body>
+            <Modal.Footer>
+              <Button variant="primary" href="/oauth/cognito/authorize">
+                Login
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        )
+        }
+      </div>
     );
   }
 }

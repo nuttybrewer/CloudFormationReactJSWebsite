@@ -1,13 +1,23 @@
 import React from 'react';
+import { Container, Card } from 'react-bootstrap';
 
+import './MainCard.css';
 class MainCard extends React.Component{
 
   render() {
-    const { sessiontoken } = this.props;
     return (
-        <div>
-        { sessiontoken ? ( <div><p>Hello</p></div> ) : (<a href="/oauth/cognito/authorize">Please login to main app</a>)}
-        </div>
+      <Card className="text-center">
+        <Card.Header>Welcome</Card.Header>
+        <Card.Body>
+          <Card.Title>Not Implemented</Card.Title>
+          <Card.Text className="mainAppBody">
+            This portion of the application is not available yet, please click on another
+            menu option above
+          </Card.Text>
+      </Card.Body>
+      <Card.Footer className="text-muted">2 days ago</Card.Footer>
+    </Card>
+
     );
   }
 
