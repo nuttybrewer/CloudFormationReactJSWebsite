@@ -150,9 +150,11 @@ class FieldExtractionPanel extends Component {
           </Modal.Header>
             <Modal.Body>
               <h3 className="loginPrompt">This App requires a Github account</h3>
-              <p> Please log in to Github,
-                we will need to fork a public repository
-                to hold the contents of this application</p>
+                <p> Please log in to Github,
+                  we will need to fork a public repository
+                  to hold the contents of this application</p>}
+              {error ? (<h1>{error}</h1>):''}
+
             </Modal.Body>
           <Modal.Footer>
             <Button variant="dark" href="/">
