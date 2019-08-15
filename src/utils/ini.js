@@ -1,7 +1,7 @@
 // Modified version of ini by Isaac Z. Schlueter and Contributors
 // https://github.com/npm/ini
 
-// const util = require('util');
+const util = require('util');
 exports.serialize = serialize;
 exports.deserialize = deserialize
 exports.safe = safe
@@ -11,20 +11,24 @@ exports.unsafe = unsafe
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
     opt = {
-      whitespace: false
+      source: opt
     }
   } else {
     opt = opt || {}
-    opt.whitespace = opt.whitespace === true
   }
+  opt.source = opt.source || '.'
+  opt.virtual = opt.virtual || false
   var out = "";
 
   // Find the root
   var rootLine;
   if (obj['.'] && obj['.'].values) {
-    rootLine = obj['.'].values.find((val) => val.prevline === null);
+    rootLine = obj['.'].values.find((val) => {
+      return val.prevline === null && val.source === opt.source
+    });
   }
   if (!rootLine) {
+    console.log("Couldn't find root for " + opt.source)
     return;
   }
 
@@ -34,10 +38,10 @@ function deserialize(obj, opt) {
   while(currObject) {
     // Weird EOF condition, we don't want to add a newline if this is the last line?
     if(!currObject.nextline){
-      out += renderValue(currObject.content, opt.virtual ? currObject.virtualvalue : currObject.value);
+      out += renderValue(currObject.content, (opt.virtual ? currObject.virtualvalue : currObject.value));
     }
     else {
-      out += renderValue(currObject.content, opt.virtual ? currObject.virtualvalue : currObject.value) + '\n';
+      out += renderValue(currObject.content, (opt.virtual ? currObject.virtualvalue : currObject.value)) + '\n';
     }
     currObject = currObject.nextline;
   }
@@ -68,26 +72,63 @@ function renderValue (key, val, opts) {
   return key
 }
 
+function emptyCallback(out, val, opt) {
+  return;
+}
+
+// properties = {
+//   key: {
+//     type: "attribute | section | include",
+//     children: ['properties'],
+//     values: ['valueObjects']
+//   }
+// }
+//
+// valueObjects = {
+//   value: 'string or array of strings',
+//   content: 'string with the original content pulled, optionally removed the value portion',
+//   virtualcontent: 'value containing variable substitutions',
+//   literal: 'boolean - if the content of value is null, true, false then we convert to their string counterpart',
+//   nextline: 'valueObject',
+//   prevline: 'valueObject',
+//   source:  'valueObject.value of the root object (so the file path) from which this valueObject was parsed'
+// }
 function serialize (str, opt) {
   if (typeof opt === 'string') {
     opt = {
-      delimiter: opt
+      source: '.',
     }
   } else {
     opt = opt || {}
-    opt.delimiter = opt.delimiter || ','
   }
+  opt.include_callback = opt.include_callback || emptyCallback
+  opt.source = opt.source || '.'
+  opt.environment = opt.environment || {}
 
-  var startingPoint = { value: null, content: null, prevline: null, nextline: null}
-  var out = {
-    '.': {
-      type: 'section',
-      values: [startingPoint]
+  var startingPoint;
+  var out;
+  if (opt.out) {
+    out = opt.out;
+    startingPoint =  out['.'].values.find((obj) => {
+      return obj.source === opt.source && obj.prevline === null
+    });
+    if(!startingPoint) {
+      startingPoint = { value: null, content: null, prevline: null, nextline: null, source: opt.source}
+      out['.'].values.push(startingPoint);
+    }
+  }
+  else {
+    startingPoint = { value: null, content: null, prevline: null, nextline: null, source: opt.source}
+    out = {
+      '.': {
+        type: 'section',
+        values: [startingPoint]
+      }
     }
   }
   var p = out
   var commentKey = p['.'].values
-  var currObject = commentKey[0]; // startingPoint above
+  var currObject = startingPoint; // startingPoint above
   var section = null
   var insideDotSection = false
 
@@ -96,10 +137,10 @@ function serialize (str, opt) {
   var re = /^\s*\[([^\]]*)\]$|^([^=]+)(=(.*))?$/i
   var lines = str.split(/[\r\n]/g, -1)
 
-  lines.forEach(function (line, _, __) {
+   lines.forEach( function (line, _, __) {
     if (!line || line.match(/^\s*[;#]/)){
       // Assign our value and manage the linked list
-      const val = { value: null, content: line, prevline: currObject, nextline: null}
+      const val = { value: null, content: line, prevline: currObject, nextline: null, source: opt.source }
       currObject.nextline = val;
       currObject = val;
       // Push our value into the decoded object
@@ -109,7 +150,7 @@ function serialize (str, opt) {
     var match = line.match(re)
     if (!match) {
       // Assign our value and manage the linked list
-      const val = { value: null, content: line, prevline: currObject, nextline: null}
+      const val = { value: null, content: line, prevline: currObject, nextline: null, source: opt.source }
       currObject.nextline = val;
       currObject = val;
       // Push our value into the decoded object
@@ -120,7 +161,7 @@ function serialize (str, opt) {
     // Match Sections in square brackets
     if (match[1] !== undefined) {
       section = unsafe(match[1])
-      const val = { value: null, content: line, prevline: currObject, nextline: null}
+      const val = { value: null, content: line, prevline: currObject, nextline: null, source: opt.source }
       currObject.nextline = val;
       currObject = val;
       p = out[section] = out[section] || { type: 'section', values: [val], children: {}};
@@ -129,17 +170,6 @@ function serialize (str, opt) {
     var literal = false;
     var key = unsafe(match[2])
     var value = match[3] ? unsafe(match[4]) : true
-    // Convert value to native JSON types
-    switch (value) {
-      case 'true':
-      case 'false':
-      case 'null':
-      case 'undefined':
-        value = JSON.parse(value);
-        literal = true
-        break;
-      default:
-    }
 
     // Handle dot(.) sections here
       var dotSection = key.split('.', 2);
@@ -156,27 +186,33 @@ function serialize (str, opt) {
     const substitutionRegex = /\${([^}]*)/gm;
     let varMatchGroups;
     let virtualValue = value.repeat(1);
-    while ((varMatchGroups = substitutionRegex.exec(virtualValue)) !== null) {
+    while ((varMatchGroups =  substitutionRegex.exec(virtualValue)) !== null) {
       // This is necessary to avoid infinite loops with zero-width matches
       if (varMatchGroups.index === substitutionRegex.lastIndex) {
           substitutionRegex.lastIndex++;
       }
       const subKey = varMatchGroups[1];
-      const subValue = out[subKey];
       var replaceValue;
-      if (subValue) {
-        replaceValue = subValue.values.map((obj) => {
-          if(Array.isArray(obj.value)){
-            return obj.value.join(',')
-          }
-          return obj.value
-        }).join(',');
+      console.log("Substituting value " + subKey)
+      if (opt.environment[subKey]) {
+        replaceValue = opt.environment[subKey]
+      }
+      else {
+        const subValue = out[subKey];
 
-
-        if (replaceValue) {
-          const term = '${' + subKey + '}'
-          virtualValue = virtualValue.replace(term, replaceValue);
+        if (subValue) {
+          replaceValue =  subValue.values.map( (obj) => {
+            if(Array.isArray(obj.value)){
+              return obj.value.join(',')
+            }
+            return obj.value
+          }).join(',');
         }
+      }
+      console.log("Replacement value " + replaceValue);
+      if (replaceValue) {
+        const term = '${' + subKey + '}'
+        virtualValue = virtualValue.replace(term, replaceValue);
       }
     }
 
@@ -194,7 +230,27 @@ function serialize (str, opt) {
     const keywithassignmentandwhitespace = /^(.*=\s*).*$/
     const keycontent = line.match(keywithassignmentandwhitespace);
 
-    const val = { value: value, content: keycontent[1], prevline: currObject, nextline: null, literal: literal, virtualvalue: virtualValue }
+    // Convert value to native JSON types
+    switch (value) {
+      case 'true':
+      case 'false':
+      case 'null':
+      case 'undefined':
+        value = JSON.parse(value);
+        literal = true
+        break;
+      default:
+    }
+
+    const val = {
+      value: value,
+      content: keycontent[1],
+      prevline: currObject,
+      nextline: null,
+      literal: literal,
+      virtualvalue: virtualValue,
+      source: opt.source
+    }
     currObject.nextline = val;
     currObject = val;
 
@@ -211,10 +267,6 @@ function serialize (str, opt) {
       }
     }
     else {
-      // Treat our "special" keys such as "include"
-      if (key === 'include' && opt.include_callback) {
-        opt.include_callback(out, val)
-      }
       if (p[key]){
         p[key].values.push(val)
       }
@@ -223,7 +275,50 @@ function serialize (str, opt) {
       }
     }
   });
-  return out
+  return new Promise((resolve, reject) => {
+    // Sequentially process includes
+    if (out.include) {
+      if (Array.isArray(out.include.values)) {
+        const new_includes = out.include.values.filter((v) => {
+          return v.source === opt.source
+        })
+        if (new_includes) {
+          return Promise.all(new_includes.map(v => opt.include_callback(v))).then(resp_array => {
+            return Promise.all(resp_array.map(r => serialize(r.include_body, {source: r.source})))
+              .then(outs => {
+                return mergeOuts(outs, out).then((ret) => {
+                  substitute(ret, opt);
+                  return resolve(ret)
+                });
+              })
+          });
+        }
+        // this shouldn't happen, it needs to be replaced with a catch/reject from the
+        // condition above
+        console.log("no includes in this source out " + opt.source)
+        substitute(out, opt);
+        return resolve(out);
+      }
+      else {
+        if (opt.include_callback) {
+           return opt.include_callback(out.include.values)
+            .then((resp) => {
+              opt.source = resp.source;
+              opt.out = out;
+              return serialize(resp.include_body, opt).then(o => {
+                substitute(o, opt)
+                return resolve(o);
+              });
+            })
+        }
+      }
+    }
+    else {
+      console.log("no includes out")
+      substitute(out, opt);
+      return resolve(out);
+    }
+  });
 }
 
 function isQuoted (val) {
@@ -277,4 +372,88 @@ function unsafe (val, doUnesc) {
     return unesc.trim()
   }
   return val
+}
+
+function processOutKeys(source, target) {
+  if (source.type !== target.type) {
+    throw new Error("Unable to merge, source object type: " + source.type + " target type: " + target.type);
+  }
+  target.values.push(...source.values);
+  if(source.children) {
+    Object.keys(source.children).forEach((skey) => {
+      if(target.children[skey]) {
+        processOutKeys(source.children[skey], target.children[skey]);
+      }
+      else {
+        target.children[skey] = source.children[skey]
+      }
+    });
+  }
+}
+
+function mergeOuts(outs, out) {
+  return new Promise((resolve, reject) => {
+    outs.forEach((o) => {
+      Object.keys(o).forEach((key) => {
+        if (out[key]) {
+          processOutKeys(o[key], out[key])
+        }
+        else {
+          out[key] = o[key]
+        }
+      });
+      return resolve(out);
+    });
+  });
+}
+
+function substitute(tree, opt) {
+  // Find all the roots
+  tree['.'].values.filter((val) => val.prevline === null).forEach((startLine) => {
+    var currObject = startLine;
+    console.log("Current Object " + util.inspect(currObject, {depth: 2}));
+    // Virtual vs. Real rendering
+    while(currObject) {
+      if(typeof currObject.value === 'string') { // Comments won't have values
+        console.log("currObject.value: " + currObject.value)
+        // Deal with variable substitution.
+        // Note the variables need to be "EARLIER" in the file
+        // or they won't be resolved
+        const substitutionRegex = /\${([^}]*)/gm;
+        let varMatchGroups;
+        let virtualValue = currObject.value.repeat(1);
+        while ((varMatchGroups =  substitutionRegex.exec(virtualValue)) !== null) {
+          // This is necessary to avoid infinite loops with zero-width matches
+          if (varMatchGroups.index === substitutionRegex.lastIndex) {
+              substitutionRegex.lastIndex++;
+          }
+          const subKey = varMatchGroups[1];
+          var replaceValue;
+          console.log("Substituting value " + subKey)
+          if (opt.environment[subKey]) {
+            replaceValue = opt.environment[subKey]
+          }
+          else {
+            const subValue = tree[subKey];
+
+            if (subValue) {
+              replaceValue =  subValue.values.map( (obj) => {
+                if(Array.isArray(obj.virtualvalue)){
+                  return obj.virtualvalue.join(',')
+                }
+                return obj.virtualvalue
+              }).join(',');
+            }
+          }
+          console.log("Replacement value " + replaceValue);
+          if (replaceValue) {
+            const term = '${' + subKey + '}'
+            virtualValue = virtualValue.replace(term, replaceValue);
+            currObject.virtualvalue = virtualValue;
+          }
+        }
+      }
+      currObject = currObject.nextline
+    }
+  })
 }
