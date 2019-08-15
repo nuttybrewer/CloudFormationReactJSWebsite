@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 import Github from 'github-api';
 import Octokit from '@octokit/rest';
-import { Navbar, Nav } from 'react-bootstrap';
+import { Navbar, Nav, Modal, Button, Spinner } from 'react-bootstrap';
 
 import util from 'util';
+import { FaGithub } from 'react-icons/fa';
 
 import FieldExtractionBranchList from './FieldExtractionBranchList'
 import FieldExtractionVersionList from './FieldExtractionVersionList'
@@ -106,54 +107,69 @@ class FieldExtractionPanel extends Component {
   }
 
   //
-
+  //
   render() {
     const { client, fieldExtractionRepo, owner, fetchingData, repoBranch, libVersion, error } = this.state;
     if (!fetchingData) {
-      return (
-        <div className="gitHubContainer">
-        {
-          owner ? (
-            fieldExtractionRepo ?
-            (
+      if(owner) {
+        if (fieldExtractionRepo) {
+          return (
+            <div>
               <div>
-                <div>
-                <Navbar className="bg-light justify-content-between">
-                <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-                  <Navbar.Collapse id="responsive-navbar-nav">
-                    <Nav className="ml-auto">
+              <Navbar className="bg-light justify-content-between">
+              <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+                <Navbar.Collapse id="responsive-navbar-nav">
+                  <Nav className="ml-auto">
+                    <Nav.Item>
                       <FieldExtractionBranchList client={client} reponame={fieldExtractionRepo} repoBranch={repoBranch} owner={owner} onBranchChange={this.onBranchChange} onGithubError={this.onGithubError} />
+                    </Nav.Item>
+                    <Nav.Item>
                       <FieldExtractionVersionList client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onLibVersionChange={this.onLibVersionChange} onGithubError={this.onGithubError} />
-                    </Nav>
-                  </Navbar.Collapse>
-                </Navbar>
-                </div>
-                <div>
-                  <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} />
-                </div>
+                    </Nav.Item>
+                </Nav>
+                </Navbar.Collapse>
+              </Navbar>
               </div>
-            ) :
-            (
-              <FieldExtractionForkDialog client={client} onGithubError={this.onGithubError} onSuccess={this.update}/>
-            )
-          ) :
-          (
-            error ?
-            (
               <div>
-                <p><b>{error}</b></p>
-                <a href="/oauth/github/authorize"> Please fix it and log back into github</a>
+                <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} />
               </div>
-            ):(
-              <a href="/oauth/github/authorize"> Please log into github</a>
-            )
+            </div>
           )
         }
-        </div>
-      );
+        else {
+          return (
+            <FieldExtractionForkDialog client={client} onGithubError={this.onGithubError} onSuccess={this.update}/>
+          )
+        }
+      }
+      else {
+        return (
+        <Modal show="true" >
+          <Modal.Header >
+            <Modal.Title><FaGithub/> Field Extraction</Modal.Title>
+          </Modal.Header>
+            <Modal.Body>
+              <h3 className="loginPrompt">This App requires a Github account</h3>
+              <p> Please log in to Github,
+                we will need to fork a public repository
+                to hold the contents of this application</p>
+            </Modal.Body>
+          <Modal.Footer>
+            <Button variant="dark" href="/">
+              Cancel
+            </Button>
+            <Button variant="dark" href="/oauth/github/authorize">
+              Login <FaGithub/>
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        )
+      }
     }
     else {
-      return ( <div><i>Loading...</i></div> );
+      return ( <Spinner animation="border" role="status" variant="dark">
+                  <span className="sr-only">Loading...</span>
+               </Spinner> );
     }
   }
 }
