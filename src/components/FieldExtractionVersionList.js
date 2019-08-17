@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Form } from 'react-bootstrap';
+import { Form, InputGroup } from 'react-bootstrap';
 // import util from 'util';
 
 class FieldExtractionVersionList extends Component {
@@ -73,12 +73,14 @@ class FieldExtractionVersionList extends Component {
     if (!fetchingData && libVersion) {
       return (
         <Form inline>
-          <Form.Group controlId="versionSelection">
-            <Form.Label>Library Version</Form.Label>
+          <InputGroup>
+            <InputGroup.Prepend>
+              <InputGroup.Text id="libVersion">Version</InputGroup.Text>
+            </InputGroup.Prepend>
             <Form.Control as="select" onChange={this.selectVersion.bind(this)} ref={ el => this.inputEl=el } defaultValue={libVersion.name}>
               {versionItems}
             </Form.Control>
-          </Form.Group>
+          </InputGroup>
         </Form>
       );
     }

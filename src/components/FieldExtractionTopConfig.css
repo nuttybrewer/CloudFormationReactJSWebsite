@@ -49,12 +49,24 @@
 }
 
 .deni-react-treeview-container {
-  width: auto;
-  height: auto;
+  height: 100%;
+  width: 100%;
+  flex: 1 1 auto;
+  display: 'flex';
+}
+
+.extractorNavPanel {
+  height: 100%;
 }
 
 .FEConfigForm {
-  height: auto;
+  height: 100%;
+  width: auto;
   flex: 1;
   display: 'flex';
+  background: rgba(20, 20, 20, .3);
+}
+
+.bottomPane {
+  border-top: solid 2px #a5c7e3;
 }

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Form } from 'react-bootstrap';
+import { Form, InputGroup } from 'react-bootstrap';
 // import util from 'util';
 
 class FieldExtractionBranchList extends Component {
@@ -60,12 +60,14 @@ class FieldExtractionBranchList extends Component {
     if (!fetchingData) {
       return (
         <Form inline>
-          <Form.Group controlId="branchSelection">
-            <Form.Label>Branches</Form.Label>
+          <InputGroup>
+            <InputGroup.Prepend>
+              <InputGroup.Text id="libBranch">Branch</InputGroup.Text>
+            </InputGroup.Prepend>
             <Form.Control as="select" onChange={this.selectBranch.bind(this)} ref={ el => this.inputEl=el } defaultValue={repoBranch}>
               {branchItems}
             </Form.Control>
-          </Form.Group>
+          </InputGroup>
         </Form>
       );
     }

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import TreeView from 'deni-react-treeview';
-import util from 'util'
+// import util from 'util'
 class FieldExtractionNavigationTree extends Component {
 
   constructor(props) {

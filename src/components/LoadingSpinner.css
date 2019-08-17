@@ -1,0 +1,9 @@
+.loadingSpinner {
+  text-align: center;
+  height: 80vh;
+}
+
+.innerSpinner {
+  height: 80vh;
+  display: inline-block;
+}

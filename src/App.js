@@ -23,6 +23,7 @@ class App extends Component{
   };
   constructor(props) {
     super(props);
+    this.logoutGithub = this.logoutGithub.bind(this);
     this.signOut = this.signOut.bind(this);
 
     // Hold our state prior to assigning it.
@@ -80,7 +81,10 @@ class App extends Component{
 
     this.state = state;
   }
-
+  logoutGithub() {
+    sessionStorage.removeItem('githubtoken');
+    this.setState({githubtoken: null});
+  }
   signOut() {
     const { cookies } = this.props;
     cookies.remove("sessiontoken");
@@ -105,9 +109,9 @@ class App extends Component{
                   <Navbar.Brand>Portal</Navbar.Brand>
                   <Navbar.Toggle aria-controls="responsive-navbar-nav" />
                   <Navbar.Collapse id="responsive-navbar-nav">
-                    <Nav className="mr-auto">
-                      <Nav.Link as={Link} to="/">Home</Nav.Link>
-                      <Nav.Link as={Link} to="/github">Field Extraction Editor</Nav.Link>
+                    <Nav className="mr-auto" defaultActiveKey="/">
+                      <Nav.Link as={Link} to="/" eventKey="/">Home</Nav.Link>
+                      <Nav.Link as={Link} to="/github" eventKey="/github">Field Extraction Editor</Nav.Link>
                     </Nav>
                   </Navbar.Collapse>
                   <Button type="submit" variant="secondary" size="sm" onClick={this.signOut}>Sign Out <FaSignOutAlt/></Button>
@@ -120,7 +124,7 @@ class App extends Component{
                 <Route
                   exact
                   path="/github"
-                  render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} />}
+                  render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} logoutGithub={this.logoutGithub}/>}
                 />
             </div>
           </BrowserRouter>
@@ -132,10 +136,10 @@ class App extends Component{
               <Modal.Title>Portal App</Modal.Title>
             </Modal.Header>
               <Modal.Body>
-                <h3 className="loginPrompt">This App Requires an account</h3>
+                <h3 className="loginPrompt">This App requires an account</h3>
               </Modal.Body>
             <Modal.Footer>
-              <Button variant="primary" href="/oauth/cognito/authorize">
+              <Button variant="dark" href="/oauth/cognito/authorize">
                 Login
               </Button>
             </Modal.Footer>

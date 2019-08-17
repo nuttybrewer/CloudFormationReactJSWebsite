@@ -1,7 +1,7 @@
 import React from 'react'
-import { Form, Col, InputGroup, Container, Row } from 'react-bootstrap';
+import { Form, Col, InputGroup} from 'react-bootstrap';
 import Editor from '@monaco-editor/react';
-import util from 'util'
+// import util from 'util'
 
 class FieldExtractionExtractorConfigForm extends React.Component {
   constructor(props) {
@@ -16,8 +16,9 @@ class FieldExtractionExtractorConfigForm extends React.Component {
     this.loadConfig();
   }
   componentDidUpdate(prevProps) {
+    console.log("ConfigForm Update");
     const newConfigFile = this.props.section.children.configFile;
-    const oldConfigFile = this.props.section.children.configFile;
+    const oldConfigFile = prevProps.section.children.configFile;
     if (newConfigFile === oldConfigFile) {
       return;
     }
@@ -80,8 +81,7 @@ class FieldExtractionExtractorConfigForm extends React.Component {
     }
 
     return (
-      <Container>
-      <Row>
+      <>
       <Form autoComplete="off">
         <Form.Row>
           <Col>
@@ -111,12 +111,8 @@ class FieldExtractionExtractorConfigForm extends React.Component {
         </Form.Row>
         {typeFormGroup}
       </Form>
-      </Row>
-      { config ? (
-      <Row>
-        <Editor height="75vh" value={config}/>
-      </Row>) : '<h1>No Config</h1>'}
-      </Container>
+      { config ? ( <Editor height="100%" value={config}/>) : '<h1>No Config</h1>'}
+      </>
     );
   }
 }

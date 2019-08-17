@@ -2,11 +2,8 @@
 // https://github.com/npm/ini
 
 const util = require('util');
-exports.serialize = serialize;
-exports.deserialize = deserialize
-exports.safe = safe
-exports.unsafe = unsafe
 
+export default { deserialize, serialize };
 
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
@@ -72,8 +69,8 @@ function renderValue (key, val, opts) {
   return key
 }
 
-function emptyCallback(out, val, opt) {
-  return;
+function emptyCallback(someval) {
+  return { include_body: null, source: null};
 }
 
 // properties = {
@@ -326,16 +323,16 @@ function isQuoted (val) {
     (val.charAt(0) === "'" && val.slice(-1) === "'")
 }
 
-function safe (val) {
-  return (typeof val !== 'string' ||
-    val.match(/[=\r\n]/) ||
-    val.match(/^\[/) ||
-    (val.length > 1 &&
-     isQuoted(val)) ||
-    val !== val.trim())
-      ? JSON.stringify(val)
-      : val.replace(/;/g, '\\;').replace(/#/g, '\\#')
-}
+// function safe (val) {
+//   return (typeof val !== 'string' ||
+//     val.match(/[=\r\n]/) ||
+//     val.match(/^\[/) ||
+//     (val.length > 1 &&
+//      isQuoted(val)) ||
+//     val !== val.trim())
+//       ? JSON.stringify(val)
+//       : val.replace(/;/g, '\\;').replace(/#/g, '\\#')
+// }
 
 function unsafe (val, doUnesc) {
   val = (val || '').trim()

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Github from 'github-api';
 import Octokit from '@octokit/rest';
-import { Navbar, Nav, Modal, Button, Spinner } from 'react-bootstrap';
+import { Navbar, Nav, Modal, Button, Dropdown } from 'react-bootstrap';
 
 import util from 'util';
 import { FaGithub } from 'react-icons/fa';
@@ -10,6 +10,9 @@ import FieldExtractionBranchList from './FieldExtractionBranchList'
 import FieldExtractionVersionList from './FieldExtractionVersionList'
 import FieldExtractionTopConfig from './FieldExtractionTopConfig'
 import FieldExtractionForkDialog from './FieldExtractionForkDialog'
+import FieldExtractionGithubModal from './FieldExtractionGithubModal'
+import LoadingSpinner from './LoadingSpinner'
+import './FieldExtractionPanel.css';
 
 class FieldExtractionPanel extends Component {
   constructor(props) {
@@ -18,6 +21,10 @@ class FieldExtractionPanel extends Component {
     this.loadRepo = this.loadRepo.bind(this);
     this.onBranchChange = this.onBranchChange.bind(this);
     this.onLibVersionChange = this.onLibVersionChange.bind(this);
+    this.showGithubTokenModal = this.showGithubTokenModal.bind(this);
+    this.hideGithubTokenModal = this.hideGithubTokenModal.bind(this);
+    this.signout = this.signout.bind(this);
+
     var client;
     if(props.githubtoken) {
       client = new Octokit({ auth: props.githubtoken});
@@ -30,13 +37,14 @@ class FieldExtractionPanel extends Component {
       fieldExtractionRepo: null,
       repoBranch: null,
       libVersion: null,
-      error: null
+      error: null,
+      showtoken: false
     };
   }
 
   componentDidUpdate(prevProps) {
     const { githubtoken } = this.props;
-    if (!githubtoken === prevProps.githubtoken) {
+    if (githubtoken && !githubtoken === prevProps.githubtoken) {
       // Send a new client to update
       this.loadRepo(new Github({ token: githubtoken}));
     }
@@ -64,6 +72,21 @@ class FieldExtractionPanel extends Component {
 
   onLibVersionChange(libVersion) {
     this.setState({libVersion: libVersion})
+  }
+
+  showGithubTokenModal() {
+    this.setState({showtoken: true} );
+  }
+
+  hideGithubTokenModal() {
+    this.setState({showtoken: false} );
+  }
+
+  signout() {
+    const { logoutGithub } = this.props;
+    // Reset everything to the original state in case we get an update.
+    this.setState({client: null, owner: null, fieldExtractionRepo: null, repoBranch: null, libVersion: null })
+    logoutGithub();
   }
 
   loadRepo(newClient) {
@@ -107,32 +130,44 @@ class FieldExtractionPanel extends Component {
   }
 
   //
-  //
+  //                          <Dropdown.Item onClick={logoutGithub()}>Log out <FaGithub/></Dropdown.Item>
+  //                 {showtoken ? (<FieldExtractionGithubModal token={githubtoken} onClose={this.hideGithubTokenModal} />) : ''}
   render() {
-    const { client, fieldExtractionRepo, owner, fetchingData, repoBranch, libVersion, error } = this.state;
+    const { client, fieldExtractionRepo, owner, fetchingData, repoBranch, libVersion, error, showtoken } = this.state;
+    const { githubtoken } = this.props;
     if (!fetchingData) {
       if(owner) {
-        if (fieldExtractionRepo) {
+        if (githubtoken && fieldExtractionRepo) {
           return (
             <div>
               <div>
-              <Navbar className="bg-light justify-content-between">
+              <Navbar className="bg-light justify-content-between" expand="lg">
               <Navbar.Toggle aria-controls="responsive-navbar-nav" />
                 <Navbar.Collapse id="responsive-navbar-nav">
-                  <Nav className="ml-auto">
-                    <Nav.Item>
+                  <Nav fill className="ml-auto">
+                    <Nav.Item className="barItem">
                       <FieldExtractionBranchList client={client} reponame={fieldExtractionRepo} repoBranch={repoBranch} owner={owner} onBranchChange={this.onBranchChange} onGithubError={this.onGithubError} />
                     </Nav.Item>
-                    <Nav.Item>
+                    <Nav.Item className="barItem">
                       <FieldExtractionVersionList client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onLibVersionChange={this.onLibVersionChange} onGithubError={this.onGithubError} />
+                    </Nav.Item>
+                    <Nav.Item className="barItem">
+                      <Dropdown as={Nav.Item} alignRight>
+                        <Dropdown.Toggle as={Button} variant="light"><FaGithub/></Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Item onClick={this.showGithubTokenModal}>Show Github token</Dropdown.Item>
+                          <Dropdown.Item onClick={this.signout}>Log out <FaGithub/></Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
                     </Nav.Item>
                 </Nav>
                 </Navbar.Collapse>
               </Navbar>
               </div>
-              <div>
+              <div className="FEMainPanel">
                 <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} />
               </div>
+              <FieldExtractionGithubModal token={githubtoken} onClose={this.hideGithubTokenModal} show={showtoken}/>)
             </div>
           )
         }
@@ -144,7 +179,7 @@ class FieldExtractionPanel extends Component {
       }
       else {
         return (
-        <Modal show="true" >
+        <Modal show={true} >
           <Modal.Header >
             <Modal.Title><FaGithub/> Field Extraction</Modal.Title>
           </Modal.Header>
@@ -152,8 +187,8 @@ class FieldExtractionPanel extends Component {
               <h3 className="loginPrompt">This App requires a Github account</h3>
                 <p> Please log in to Github,
                   we will need to fork a public repository
-                  to hold the contents of this application</p>}
-              {error ? (<h1>{error}</h1>):''}
+                  to hold the contents of this application</p>
+              {error ? (<h6>{error}</h6>):''}
 
             </Modal.Body>
           <Modal.Footer>
@@ -169,9 +204,9 @@ class FieldExtractionPanel extends Component {
       }
     }
     else {
-      return ( <Spinner animation="border" role="status" variant="dark">
-                  <span className="sr-only">Loading...</span>
-               </Spinner> );
+      return (
+        <LoadingSpinner />
+      );
     }
   }
 }
