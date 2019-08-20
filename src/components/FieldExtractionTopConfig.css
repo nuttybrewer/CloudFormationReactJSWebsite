@@ -61,10 +61,21 @@
 
 .FEConfigForm {
   height: 100%;
-  width: auto;
-  flex: 1;
-  display: 'flex';
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   background: rgba(20, 20, 20, .3);
+}
+
+.morphlineMenuBarTop {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+.morphlineMenuBarForm {
+    flex-basis: 100%;
+}
+.morphlineMenuBarName {
+    flex-grow: 2;
 }
 
 .bottomPane {

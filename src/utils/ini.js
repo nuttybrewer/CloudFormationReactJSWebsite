@@ -1,7 +1,7 @@
 // Modified version of ini by Isaac Z. Schlueter and Contributors
 // https://github.com/npm/ini
 
-const util = require('util');
+// const util = require('util');
 
 export default { deserialize, serialize };
 
@@ -190,7 +190,6 @@ function serialize (str, opt) {
       }
       const subKey = varMatchGroups[1];
       var replaceValue;
-      console.log("Substituting value " + subKey)
       if (opt.environment[subKey]) {
         replaceValue = opt.environment[subKey]
       }
@@ -206,7 +205,6 @@ function serialize (str, opt) {
           }).join(',');
         }
       }
-      console.log("Replacement value " + replaceValue);
       if (replaceValue) {
         const term = '${' + subKey + '}'
         virtualValue = virtualValue.replace(term, replaceValue);
@@ -292,7 +290,6 @@ function serialize (str, opt) {
         }
         // this shouldn't happen, it needs to be replaced with a catch/reject from the
         // condition above
-        console.log("no includes in this source out " + opt.source)
         substitute(out, opt);
         return resolve(out);
       }
@@ -311,7 +308,6 @@ function serialize (str, opt) {
       }
     }
     else {
-      console.log("no includes out")
       substitute(out, opt);
       return resolve(out);
     }
@@ -408,11 +404,9 @@ function substitute(tree, opt) {
   // Find all the roots
   tree['.'].values.filter((val) => val.prevline === null).forEach((startLine) => {
     var currObject = startLine;
-    console.log("Current Object " + util.inspect(currObject, {depth: 2}));
     // Virtual vs. Real rendering
     while(currObject) {
       if(typeof currObject.value === 'string') { // Comments won't have values
-        console.log("currObject.value: " + currObject.value)
         // Deal with variable substitution.
         // Note the variables need to be "EARLIER" in the file
         // or they won't be resolved
@@ -426,7 +420,6 @@ function substitute(tree, opt) {
           }
           const subKey = varMatchGroups[1];
           var replaceValue;
-          console.log("Substituting value " + subKey)
           if (opt.environment[subKey]) {
             replaceValue = opt.environment[subKey]
           }
@@ -442,7 +435,6 @@ function substitute(tree, opt) {
               }).join(',');
             }
           }
-          console.log("Replacement value " + replaceValue);
           if (replaceValue) {
             const term = '${' + subKey + '}'
             virtualValue = virtualValue.replace(term, replaceValue);

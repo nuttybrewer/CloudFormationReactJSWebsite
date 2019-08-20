@@ -12,7 +12,6 @@ class FieldExtractionNavigationTree extends Component {
   }
 
   componentDidMount() {
-      console.log("Nav component mounted")
       this.convertIni();
   }
 
@@ -56,7 +55,6 @@ class FieldExtractionNavigationTree extends Component {
     if (prevProps.data !== this.props.data) {
       this.updateIni();
     }
-    console.log("Nav component updated")
   }
 
   onSelectItem(item) {

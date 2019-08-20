@@ -131,7 +131,7 @@ class App extends Component{
         )
         :
         (
-          <Modal show="true" >
+          <Modal show={true} >
             <Modal.Header >
               <Modal.Title>Portal App</Modal.Title>
             </Modal.Header>

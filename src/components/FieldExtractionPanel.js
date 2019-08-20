@@ -2,10 +2,8 @@ import React, { Component } from 'react';
 import Github from 'github-api';
 import Octokit from '@octokit/rest';
 import { Navbar, Nav, Modal, Button, Dropdown } from 'react-bootstrap';
-
 import util from 'util';
 import { FaGithub } from 'react-icons/fa';
-
 import FieldExtractionBranchList from './FieldExtractionBranchList'
 import FieldExtractionVersionList from './FieldExtractionVersionList'
 import FieldExtractionTopConfig from './FieldExtractionTopConfig'
@@ -13,6 +11,8 @@ import FieldExtractionForkDialog from './FieldExtractionForkDialog'
 import FieldExtractionGithubModal from './FieldExtractionGithubModal'
 import LoadingSpinner from './LoadingSpinner'
 import './FieldExtractionPanel.css';
+
+Octokit.plugin([require('octokit-create-pull-request')]);
 
 class FieldExtractionPanel extends Component {
   constructor(props) {
@@ -24,6 +24,8 @@ class FieldExtractionPanel extends Component {
     this.showGithubTokenModal = this.showGithubTokenModal.bind(this);
     this.hideGithubTokenModal = this.hideGithubTokenModal.bind(this);
     this.signout = this.signout.bind(this);
+    this.enableCommit = this.enableCommit.bind(this);
+    this.disableCommit = this.disableCommit.bind(this);
 
     var client;
     if(props.githubtoken) {
@@ -34,11 +36,15 @@ class FieldExtractionPanel extends Component {
       fetchingData: false,
       client: client,
       owner: null,
+      name: null,
+      email: null,
       fieldExtractionRepo: null,
       repoBranch: null,
       libVersion: null,
       error: null,
-      showtoken: false
+      showtoken: false,
+      commitEnabled: false,
+      commitCallback: null
     };
   }
 
@@ -66,7 +72,6 @@ class FieldExtractionPanel extends Component {
   }
 
   onBranchChange(branchName) {
-    console.log("OnBranchChange: " + branchName)
     this.setState({repoBranch: branchName});
   }
 
@@ -129,12 +134,20 @@ class FieldExtractionPanel extends Component {
     this.onGithubError(new Error("Github client not initialized"));
   }
 
+  enableCommit(cb) {
+    this.setState({ commitEnabled: true, commitCallback: cb });
+  }
+
+  disableCommit() {
+    this.setState({ commitEnabled: false, commitCallback: null });
+  }
   //
   //                          <Dropdown.Item onClick={logoutGithub()}>Log out <FaGithub/></Dropdown.Item>
   //                 {showtoken ? (<FieldExtractionGithubModal token={githubtoken} onClose={this.hideGithubTokenModal} />) : ''}
   render() {
-    const { client, fieldExtractionRepo, owner, fetchingData, repoBranch, libVersion, error, showtoken } = this.state;
+    const { client, fieldExtractionRepo, owner, fetchingData, repoBranch, libVersion, error, showtoken, commitEnabled, commitCallback } = this.state;
     const { githubtoken } = this.props;
+    const showCommitAll = false; // Hack to disable CommitAll due to bug.
     if (!fetchingData) {
       if(owner) {
         if (githubtoken && fieldExtractionRepo) {
@@ -144,6 +157,12 @@ class FieldExtractionPanel extends Component {
               <Navbar className="bg-light justify-content-between" expand="lg">
               <Navbar.Toggle aria-controls="responsive-navbar-nav" />
                 <Navbar.Collapse id="responsive-navbar-nav">
+                  { showCommitAll ?
+                  <Nav className="mr-auto">
+                    <Nav.Item>
+                      <Nav.Link disabled={!commitEnabled} onClick={() => commitCallback(this.disableCommit)}>Commit All</Nav.Link>
+                    </Nav.Item>
+                  </Nav> : ('')}
                   <Nav fill className="ml-auto">
                     <Nav.Item className="barItem">
                       <FieldExtractionBranchList client={client} reponame={fieldExtractionRepo} repoBranch={repoBranch} owner={owner} onBranchChange={this.onBranchChange} onGithubError={this.onGithubError} />
@@ -165,7 +184,7 @@ class FieldExtractionPanel extends Component {
               </Navbar>
               </div>
               <div className="FEMainPanel">
-                <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} />
+                <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} enableCommit={this.enableCommit}/>
               </div>
               <FieldExtractionGithubModal token={githubtoken} onClose={this.hideGithubTokenModal} show={showtoken}/>)
             </div>
