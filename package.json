@@ -2,6 +2,7 @@
   "name": "portal",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/github",
   "dependencies": {
     "@monaco-editor/react": "^1.1.0",
     "@octokit/rest": "^16.28.7",

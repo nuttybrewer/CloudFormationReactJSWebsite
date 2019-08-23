@@ -192,7 +192,7 @@ class FieldExtractionPanel extends Component {
         }
         else {
           return (
-            <FieldExtractionForkDialog client={client} onGithubError={this.onGithubError} onSuccess={this.update}/>
+            <FieldExtractionForkDialog client={client} onGithubError={this.onGithubError} onSuccess={this.loadRepo} onCancel={this.signout} show={true}/>
           )
         }
       }
@@ -204,9 +204,9 @@ class FieldExtractionPanel extends Component {
           </Modal.Header>
             <Modal.Body>
               <h3 className="loginPrompt">This App requires a Github account</h3>
-                <p> Please log in to Github,
+                <div className="modalText"> Please log in to Github,
                   we will need to fork a public repository
-                  to hold the contents of this application</p>
+                  to hold the contents of this application</div>
               {error ? (<h6>{error}</h6>):''}
 
             </Modal.Body>

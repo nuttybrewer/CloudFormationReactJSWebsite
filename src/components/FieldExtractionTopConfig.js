@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import ini from '../utils/ini';
 import util from 'util';
 import SplitPane from 'react-split-pane';
+import './FieldExtractionTopConfig.css';
 
 import FieldExtractionConfigEditor from './FieldExtractionConfigEditor';
 import FieldExtractionNavigationTree from './FieldExtractionNavigationTree';
@@ -9,7 +10,7 @@ import FieldExtractionExtractorConfigForm from './FieldExtractionExtractorConfig
 import FieldExtractionCommitModal from './FieldExtractionCommitModal';
 import LoadingSpinner from './LoadingSpinner'
 // CSS, this might need to be modified if not using Webpack
-import './FieldExtractionTopConfig.css';
+
 
 
 // data: {
@@ -245,7 +246,7 @@ class FieldExtractionTopConfig extends Component {
       return (
         <>
           <SplitPane defaultSize="20%" split="vertical">
-            <div className="extractorNavPanel"><span><FieldExtractionNavigationTree data={iniConfig} onSelect={this.onNavigatorSelect}/></span></div>
+            <div className="extractorNavPanel"><FieldExtractionNavigationTree data={iniConfig} onSelect={this.onNavigatorSelect}/></div>
             { selectedSection ? (
               <SplitPane split="horizontal" defaultSize="75%">
                 <div className="FEConfigForm"><FieldExtractionExtractorConfigForm section={iniConfig[selectedSection]} loadMorphline={this.loadMorphline} updateMorphline={this.updateMorphline} commitMorphline={this.commitMorphline}/></div>

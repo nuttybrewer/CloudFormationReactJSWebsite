@@ -10,7 +10,7 @@ class FieldExtractionGithubModal extends React.Component {
           <Modal.Title><FaGithub/> API Token</Modal.Title>
         </Modal.Header>
           <Modal.Body>
-              {token}
+              <div className="modalText">{token}</div>
           </Modal.Body>
         <Modal.Footer>
           <Button variant="dark" onClick={onClose}>

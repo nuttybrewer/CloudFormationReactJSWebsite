@@ -1,5 +1,5 @@
 import React from 'react'
-import { Form, Col, InputGroup, Button} from 'react-bootstrap';
+import { Form, InputGroup, Button} from 'react-bootstrap';
 import { ControlledEditor } from '@monaco-editor/react';
 
 import FieldExtractionCommitModal from './FieldExtractionCommitModal';

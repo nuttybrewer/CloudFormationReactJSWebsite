@@ -67,7 +67,9 @@ class FieldExtractionNavigationTree extends Component {
     const { vendors } = this.state;
     if (vendors) {
       return (
-        <TreeView items={vendors} onSelectItem={ this.onSelectItem.bind(this) } />
+        <div className="theme-customization">
+          <TreeView items={vendors} onSelectItem={ this.onSelectItem.bind(this) } className="treeview-teste" />
+        </div>
       )
     }
     else {

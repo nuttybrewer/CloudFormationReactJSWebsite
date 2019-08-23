@@ -48,13 +48,27 @@
   border-color: transparent;
 }
 
-.deni-react-treeview-container {
+.theme-customization {
   height: 100%;
   width: 100%;
+  .deni-react-treeview-container {
+    height: 100%;
+    width: 100%;
+    flex: 1 1 auto;
+    display: flex;
+  }
+}
+.deni-react-treeview-container {
+  height: 100% !important;
+  width: 100% !important;
   flex: 1 1 auto;
-  display: 'flex';
+  display: flex;
 }
 
+.deniTree {
+  height: 100%;
+  width: 100%;
+}
 .extractorNavPanel {
   height: 100%;
 }

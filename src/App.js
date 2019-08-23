@@ -13,7 +13,6 @@ import { FaSignOutAlt } from 'react-icons/fa';
 import './App.css';
 import url from 'url';
 
-import MainCard from './components/MainCard';
 // import GithubPanel from './components/GithubPanel';
 import FieldExtractionPanel from './components/FieldExtractionPanel';
 
@@ -109,18 +108,13 @@ class App extends Component{
                   <Navbar.Brand>Portal</Navbar.Brand>
                   <Navbar.Toggle aria-controls="responsive-navbar-nav" />
                   <Navbar.Collapse id="responsive-navbar-nav">
-                    <Nav className="mr-auto" defaultActiveKey="/">
-                      <Nav.Link as={Link} to="/" eventKey="/">Home</Nav.Link>
+                    <Nav className="mr-auto" defaultActiveKey="/github">
+                      <Nav.Link href="/" eventKey="/">Home</Nav.Link>
                       <Nav.Link as={Link} to="/github" eventKey="/github">Field Extraction Editor</Nav.Link>
                     </Nav>
                   </Navbar.Collapse>
                   <Button type="submit" variant="secondary" size="sm" onClick={this.signOut}>Sign Out <FaSignOutAlt/></Button>
                 </Navbar>
-                <Route
-                  exact
-                  path="/"
-                  render={(props) => <MainCard {...props}  />}
-                />
                 <Route
                   exact
                   path="/github"

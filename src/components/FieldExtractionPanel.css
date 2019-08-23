@@ -5,3 +5,7 @@
 .FEMainPanel {
   height: 100%;
 }
+.modalText {
+  justify-content: center;
+  padding: 20px;
+}
