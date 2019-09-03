@@ -1,11 +1,14 @@
 var express = require('express');
 var router = express.Router();
+
 const jsonwebtoken = require('jsonwebtoken');
 
 const oauth_provider = {
   "cognito": "sessiontoken",
   "github": "githubtoken"
 }
+
+
 
 // Cognito Provider
 /* GET Oauth token. */

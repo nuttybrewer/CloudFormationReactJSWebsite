@@ -1,7 +1,7 @@
 // Modified version of ini by Isaac Z. Schlueter and Contributors
 // https://github.com/npm/ini
 
-// const util = require('util');
+const util = require('util');
 
 export default { deserialize, serialize };
 
@@ -15,6 +15,7 @@ function deserialize(obj, opt) {
   }
   opt.source = opt.source || '.'
   opt.virtual = opt.virtual || false
+  opt.section = opt.section || null
   var out = "";
 
   // Find the root
@@ -42,7 +43,31 @@ function deserialize(obj, opt) {
     }
     currObject = currObject.nextline;
   }
-  return out
+
+  // Find the start and stop for the section in this file
+  if(opt.section) {
+    const section = obj[opt.section];
+    if(section && section.children) {
+      console.log(Object.keys(section.children));
+      const accumulator = Object.keys(section.children).reduce((ranges, attrKey) => {
+        // Find the lowest starting line
+        var lineCount = 0;
+        console.log("Counting: " + util.inspect(attrKey));
+        var prevObject = section.children[attrKey].values[0].prevline;
+        while (prevObject) {
+          prevObject = prevObject.prevline
+          lineCount = lineCount + 1;
+        }
+        if (!ranges[section.children[attrKey].values[0].source]){
+          ranges[section.children[attrKey].values[0].source] = []
+        }
+        ranges[section.children[attrKey].values[0].source].push(lineCount);
+        return ranges;
+      }, {});
+      return { data: out, ranges: accumulator };
+    }
+  }
+  return { data: out }
 }
 
 function renderValue (key, val, opts) {

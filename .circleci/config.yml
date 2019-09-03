@@ -21,11 +21,11 @@ jobs:
           key: dependency-cache-{{ checksum "nodejs/package.json" }}
           paths:
             - ./node_modules
-      - run: # run tests
-          name: run npm test
-          command: npm test
-          environment:
-            JEST_JUNIT_OUTPUT: "reports/junit/junit.xml"
+      # - run: # run tests
+      #     name: run npm test
+      #     command: npm test
+      #     environment:
+      #       JEST_JUNIT_OUTPUT: "reports/junit/junit.xml"
       - save_cache: # special step to save the dependency cache
           key: dependency-cache-{{ checksum "nodejs/package.json" }}
           paths:

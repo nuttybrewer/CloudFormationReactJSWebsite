@@ -1,0 +1,36 @@
+.testResults {
+  display: flex;
+  height: 100vh;
+  width: 100vh;
+  white-space: pre;
+  overflow: auto;
+}
+
+.testBar {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.jsonResults {
+  border-radius: 5px;
+  border: 2px solid;
+  border-color: #a5c7e3 !important;
+  margin: 5px;
+  padding: 2px;
+  overflow: overlay;
+  height: 80vh;
+  max-width: 99%;
+}
+
+.resultLabel {
+  width: auto;
+  font-size: unset;
+  margin-bottom: unset;
+}
+
+.errorLabel {
+  width: auto;
+  font-size: unset;
+  margin-bottom: unset;
+  color: red;
+}

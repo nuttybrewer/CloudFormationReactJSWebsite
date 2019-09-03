@@ -20,7 +20,8 @@ class FieldExtractionNavigationTree extends Component {
     var vendors = {};
     // Find all the extractors, their source and their vendor
     Object.keys(data).filter((iniObjKey) => {
-      return data[iniObjKey].type === 'section' && iniObjKey !== '.'
+      // return data[iniObjKey].type === 'section' && iniObjKey !== '.'
+      return data[iniObjKey].type === 'section'
     }).forEach((section, sectionIndex) => {
       if (data[section].children) {
         var sources = [];

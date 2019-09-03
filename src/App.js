@@ -15,6 +15,7 @@ import url from 'url';
 
 // import GithubPanel from './components/GithubPanel';
 import FieldExtractionPanel from './components/FieldExtractionPanel';
+import MainCard from './components/MainCard';
 
 class App extends Component{
   static propTypes = {
@@ -75,19 +76,19 @@ class App extends Component{
       window.history.replaceState(null, null, window.location.pathname);
     }
     else if (sessionStorage.getItem("githubtoken")) {
-      state.githubtoken = sessionStorage.getItem("githubtoken");
+      state.githubtoken = window.sessionStorage.getItem("githubtoken");
     }
 
     this.state = state;
   }
   logoutGithub() {
-    sessionStorage.removeItem('githubtoken');
+    window.sessionStorage.removeItem('githubtoken');
     this.setState({githubtoken: null});
   }
   signOut() {
     const { cookies } = this.props;
     cookies.remove("sessiontoken");
-    sessionStorage.clear();
+    window.sessionStorage.clear();
     this.setState({githubtoken: null, sessiontoken: null})
   }
 //  <p>
@@ -111,6 +112,7 @@ class App extends Component{
                     <Nav className="mr-auto" defaultActiveKey="/github">
                       <Nav.Link href="/" eventKey="/">Home</Nav.Link>
                       <Nav.Link as={Link} to="/github" eventKey="/github">Field Extraction Editor</Nav.Link>
+                      <Nav.Link as={Link} to="/test" eventKey="/test">Test</Nav.Link>
                     </Nav>
                   </Navbar.Collapse>
                   <Button type="submit" variant="secondary" size="sm" onClick={this.signOut}>Sign Out <FaSignOutAlt/></Button>
@@ -119,6 +121,11 @@ class App extends Component{
                   exact
                   path="/github"
                   render={(props) => <FieldExtractionPanel {...props} githubtoken={githubtoken} logoutGithub={this.logoutGithub}/>}
+                />
+                <Route
+                  exact
+                  path="/test"
+                  render={(props) => <MainCard />}
                 />
             </div>
           </BrowserRouter>

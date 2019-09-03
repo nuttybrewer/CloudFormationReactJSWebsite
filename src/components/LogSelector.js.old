@@ -1,0 +1,201 @@
+import React from 'react';
+import {Form, Button, Col, Row, Container, InputGroup} from 'react-bootstrap';
+// import {Typeahead} from 'react-bootstrap-typeahead';
+// import util from 'util';
+
+import './LogSelector.css';
+
+import LogToastItem from './LogToastItem';
+
+class LogSelector extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      logs: {},
+      cachedLogs: {},
+      currLogValue: null,
+      currLogKey: null,
+      validated: false
+    }
+    // this.getCachedLogs = this.getCachedLogs.bind(this);
+    // this.cacheAddCurrLog = this.cacheAddCurrLog.bind(this);
+    // this.cacheCurrLog = this.cacheCurrLog.bind(this);
+    // this.cacheRemoveToast = this.cacheRemoveToast.bind(this);
+    // this.cacheSelectLogToastItem = this.cacheSelectLogToastItem.bind(this);
+    // this.removeToast = this.removeToast.bind(this);
+    // this.selectLogToastItem = this.selectLogToastItem.bind(this);
+  }
+
+  // On first load get the cache
+  componentDidMount(props) {
+    this.getCachedLogs();
+  }
+
+  getCachedLogs() {
+    this.setState({ cachedLogs: JSON.parse(localStorage.getItem("feCachedLogs")) || {}});
+  }
+
+  cacheAddCurrLog(logKey, logValue) {
+    const { cachedLogs } = this.state;
+    cachedLogs[logKey] = logValue;
+    localStorage.setItem("feCachedLogs", JSON.stringify(cachedLogs));
+    this.setState({ cachedLogs: cachedLogs})
+    //this.getCachedLogs();
+  }
+
+  cacheCurrLog(event) {
+    const {logs, currLogKey, currLogValue} = this.state;
+    if(currLogKey && currLogValue) {
+      this.cacheAddCurrLog(currLogKey, currLogValue);
+      return this.setState({ logs: logs, validated: false })
+    }
+    return this.setState({validated: true});
+  }
+
+  cacheRemoveToast(logkey) {
+    const { cachedLogs } = this.state;
+    if (cachedLogs && logkey) {
+      delete cachedLogs[logkey];
+      if(Object.keys(cachedLogs).length > 0) {
+        localStorage.setItem("feCachedLogs", JSON.stringify(cachedLogs));
+      }
+      else {
+        localStorage.removeItem("feCachedLogs");
+      }
+      this.getCachedLogs();
+    }
+  }
+
+  cacheSelectLogToastItem(logkey) {
+    const { cachedLogs } = this.state;
+    this.setState({currLogKey: logkey, currLogValue: cachedLogs[logkey]})
+  }
+
+  addCurrLog() {
+    const { logs, currLogKey, currLogValue } = this.state;
+      if(currLogKey && currLogValue) {
+        logs[currLogKey] = currLogValue;
+        return this.setState({ logs: logs, validated: false })
+      }
+    return this.setState({validated: true});
+  }
+
+  removeToast(logkey) {
+    const { logs } = this.state;
+    if (logs && logkey) {
+      delete logs[logkey];
+      this.setState({ logs: logs});
+    }
+  }
+
+  selectLogToastItem(logkey) {
+    const { logs } = this.state;
+    this.setState({currLogKey: logkey, currLogValue: logs[logkey]})
+  }
+
+  updateCurrLogValue(event) {
+    this.setState({ currLogValue: event.target.value});
+  }
+
+  updateCurrLogKey(event) {
+    this.setState({ currLogKey: event.target.value});
+  }
+
+
+  render() {
+    const { logs, cachedLogs, currLogKey, currLogValue, validated } = this.state;
+
+    const cachedToasts = Object.keys(cachedLogs).map((logKey) =>
+      <LogToastItem
+        key={'ls' + logKey}
+        logkey={logKey}
+        selected={currLogKey === logKey ? true : false}
+        onClose={(logkey) => this.cacheRemoveToast(logkey)}
+        onClick={(logkey) => this.cacheSelectLogToastItem(logkey)}
+      />
+    );
+    const selectedToasts = Object.keys(logs).map((logKey) =>
+      <LogToastItem key={'ls' + logKey}
+        logkey={logKey}
+        selected={currLogKey === logKey ? true : false}
+        onClose={(logkey) => this.removeToast(logkey)}
+        onClick={(logkey) => this.selectLogToastItem(logkey)}
+      />
+    );
+    // <Form noValidate validated={validated} >
+    //onClick={() => this.cacheCurrLog()}
+    return (
+      <Container className="logSelectorContainer">
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          className="logCollectorSelectedLogs"
+        >
+          {cachedToasts}
+        </div>
+        <Form noValidate validated={validated} autoComplete="off">
+          <Row style={{marginLeft: '0px', marginRight: '0px'}}>
+            <Col sm="8" className="logSelectorPickerColumn">
+              <Form.Group controlId="logKeyInput">
+                <InputGroup size="sm" >
+                  <InputGroup.Prepend>
+                  <InputGroup.Text id="logKey" >Key: </InputGroup.Text>
+                  </InputGroup.Prepend>
+                  <Form.Control
+                    type="text"
+                    placeholder="Label..."
+                    aria-label="Key:"
+                    aria-describedby="logKey"
+                    autoComplete="off"
+                    onChange={(event) => this.updateCurrLogKey(event)}
+                    value={currLogKey ? currLogKey : ''}
+                    required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      Please provide a Key/Label.
+                    </Form.Control.Feedback>
+                </InputGroup>
+              </Form.Group>
+            </Col>
+            <Col className="logSelectorPickerColumn ml-auto">
+              <Button
+                className="button"
+                size="sm"
+                onClick={(event) => this.addCurrLog(event)}>
+                  Add
+              </Button>
+              <Button
+                className="button"
+                size="sm"
+                onClick={(event) => this.cacheCurrLog(event)}
+                >
+                  Cache
+              </Button>
+            </Col>
+          </Row>
+          <Row style={{marginLeft: '0px', marginRight: '0px'}}>
+              <Form.Group controlId="logValueInput" className="logTextArea">
+                <Form.Control
+                  as="textarea"
+                  onChange={event => this.updateCurrLogValue(event)}
+                  value={currLogValue ? currLogValue : ''}
+                  required
+                />
+                <Form.Control.Feedback type="invalid">
+                  Must contain a log entry.
+                </Form.Control.Feedback>
+              </Form.Group>
+          </Row>
+        </Form>
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          className="logCollectorSelectedLogs"
+        >
+          {selectedToasts}
+        </div>
+      </Container>
+    );
+  }
+}
+export default LogSelector;

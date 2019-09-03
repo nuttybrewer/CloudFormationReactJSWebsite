@@ -74,7 +74,7 @@
 }
 
 .FEConfigForm {
-  height: 100%;
+  height: 100vh;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -86,7 +86,7 @@
     justify-content: flex-end;
 }
 .morphlineMenuBarForm {
-    flex-basis: 100%;
+    /* flex-basis: 100%; */
 }
 .morphlineMenuBarName {
     flex-grow: 2;
@@ -94,4 +94,11 @@
 
 .bottomPane {
   border-top: solid 2px #a5c7e3;
+}
+.configEditorTabs {
+  height: 100%
+}
+
+.configEditorTab {
+  height: 100%
 }
