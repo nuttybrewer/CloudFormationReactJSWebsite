@@ -4,19 +4,19 @@ var router = express.Router();
 
 const singlelog = {
   extracted:
-  [
+
     {
-      log: "World,Bar",
-      matches:
-      {
-        HEADER_vendor: "SomeVendor",
-        foo:"Bar",
-        HEADER_devicetype:"Router",
-        hello:"World",
-        HEADER_devicemodel:"A Series"
+      "logkey1": {
+        log: "World,Bar",
+        matches: {
+          HEADER_vendor: "SomeVendor",
+          foo:"Bar",
+          HEADER_devicetype:"Router",
+          hello:"World",
+          HEADER_devicemodel:"A Series"
+        }
       }
-    }
-  ],
+    },
   "statusCode":200
 };
 

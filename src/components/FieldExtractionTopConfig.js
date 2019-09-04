@@ -148,10 +148,9 @@ class FieldExtractionTopConfig extends Component {
       return new Promise((resolve) => resolve({data: "Validate didn't receive a morphline"}));
     }
     // We need to base64 encode the morphline
-    const submitLogs = (Array.isArray(logs) ? logs : (logs ? [logs] : []));
     const postMorphline = {
       morphline: Buffer.from(data[path].decoded).toString('base64'),
-      logs: submitLogs
+      logs: logs
     }
     console.log("Axios: Submitting " + JSON.stringify(postMorphline));
     return axios.post('/api/hcon', postMorphline);

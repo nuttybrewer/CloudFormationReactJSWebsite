@@ -36,7 +36,6 @@ class FieldExtractionTestPanel extends Component {
     this.setState({disableTest: true})
     return testApi(path, logs)
       .then((res) => {
-        console.log("Results: " + util.inspect(res));
         this.setState({results: res.data, disableTest: false})
       })
       .catch((error) => {
@@ -97,13 +96,19 @@ class FieldExtractionTestPanel extends Component {
     const { path } = this.props;
     const { results, logs, cachedLogs, disableTest } = this.state;
     var jsonResults;
-
+    console.log("Parse Results: " + util.inspect(results));
     if(results) {
       if(results.extracted) {
         jsonResults =
           <fieldset className="jsonResults">
             <legend className="resultLabel">Results</legend>
-            <ReactJson src={{extracted: results.extracted}} className="jsonResults"/>
+            <ReactJson
+              src={results.extracted}
+              collapseStringsAfterLength="80"
+              displayDataTypes="false"
+              collapsed="2"
+              className="jsonResults"
+            />
           </fieldset>
       }
       else {
@@ -111,7 +116,9 @@ class FieldExtractionTestPanel extends Component {
         jsonResults =
           <fieldset className="jsonResults">
             <legend className="errorLabel">Error</legend>
-            <ReactJson src={{message: results.message, statusCode: results.statusCode}} className="jsonResults"/>
+            <ReactJson
+              src={{message: results.message, statusCode: results.statusCode}}
+              className="jsonResults"/>
           </fieldset>
       }
     }
