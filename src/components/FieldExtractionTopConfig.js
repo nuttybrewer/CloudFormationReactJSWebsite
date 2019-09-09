@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Tabs, Tab} from 'react-bootstrap';
+import {Tabs, Tab, Button} from 'react-bootstrap';
 import util from 'util';
 import SplitPane from 'react-split-pane';
 import axios from 'axios';
@@ -13,7 +13,8 @@ import FieldExtractionExtractorConfigForm from './FieldExtractionExtractorConfig
 import FieldExtractionCommitModal from './FieldExtractionCommitModal';
 import FieldExtractionTestPanel from './FieldExtractionTestPanel';
 
-import LoadingSpinner from './LoadingSpinner'
+import LoadingSpinner from './LoadingSpinner';
+
 
 
 
@@ -36,10 +37,12 @@ class FieldExtractionTopConfig extends Component {
     this.commitMorphline = this.commitMorphline.bind(this);
     this.onCloseCommitModal = this.onCloseCommitModal.bind(this);
     this.showCommitModal = this.showCommitModal.bind(this);
+    this.removeSection = this.removeSection.bind(this);
     this.state = {
       data: {},
       iniConfig: null,
       fetchingData: false,
+      refreshTree: false,
       selectedSource: null,
       selectedData: null,
       selectedSection: null,
@@ -73,17 +76,21 @@ class FieldExtractionTopConfig extends Component {
 
   getExtractorTopConfig() {
     const { reponame, branch, onGithubError } = this.props;
+    console.log("Reloading top config");
     if(reponame && branch) {
       this.setState({fetchingData: true})
       this.getContents('fieldextraction.properties.allextractors.web', "ini")
       .then((inicontent) => {
-        ini.serialize(inicontent.decoded, {include_callback: this.getIncludes, environment: {basepath: 'versions/1.5'} })
+        ini.serialize(inicontent.decoded, {
+          include_callback: this.getIncludes,
+          environment: {basepath: 'versions/1.5'},
+          source: 'fieldextraction.properties.allextractors.web' })
         .then(iniConfig => {
           this.setState({
             iniConfig: iniConfig,
             fetchingData: false,
             reloadAll: false,
-            selectedSection: '.',
+            selectedSection: null,
             selectedSource: 'fieldextraction.properties.allextractors.web'
           });
         })
@@ -255,7 +262,9 @@ class FieldExtractionTopConfig extends Component {
 
   onNavigatorSelect(selected) {
     const { iniConfig, data } = this.state;
-    console.log("NavSelect, selected.section: " + selected.section);
+    console.log("Top Config NavSelect: selected.source: " + selected.source +
+      " selected.section: " + selected.section);
+
     if (selected.section) {
       const section = iniConfig[selected.section];
       if(section && section.children) {
@@ -263,9 +272,10 @@ class FieldExtractionTopConfig extends Component {
           const confPath = section.children.configFile.values[0].virtualvalue;
           if (data[confPath]) {
             return this.setState({
+              refreshTree: false,
               selectedSource: selected.source,
               selectedData: confPath,
-              selectedSection: selected.section
+              selectedSection: selected.section,
             })
           }
           else {
@@ -273,9 +283,10 @@ class FieldExtractionTopConfig extends Component {
             return this.loadMorphline(confPath)
               .then((res) => {
                 this.setState({
+                  refreshTree: false,
                   selectedSource: selected.source,
                   selectedData: confPath,
-                  selectedSection: selected.section
+                  selectedSection: selected.section,
                 })
               });
           }
@@ -284,8 +295,9 @@ class FieldExtractionTopConfig extends Component {
     }
     else {
       this.setState({
+        refreshTree: false,
         selectedSource: selected.source,
-        selectedSection: selected.section
+        selectedSection: selected.section,
       });
     }
   }
@@ -302,24 +314,47 @@ class FieldExtractionTopConfig extends Component {
     });
   }
 
-  // <SplitPane split="horizontal" defaultSize="75%">
-  //   <div className="FEConfigForm"><FieldExtractionExtractorConfigForm section={iniConfig[selectedSection]} config={ data[selectedData]? data[selectedData].decoded : null } changed={data[selectedData]? data[selectedData].changed : null} path={ selectedData } updateMorphline={this.updateMorphline} commitMorphline={this.showCommitModal}/></div>
-  //   <div className="bottomPane">
-  //     <FieldExtractionConfigEditor enableCommit={this.props.enableCommit} data={ini.deserialize(iniConfig, { source: selectedSource})} style={{flex: 1}}/>
-  //   </div>
-  // </SplitPane>
-  // {ini.deserialize(iniConfig, { source: selectedSource})}
+  removeSection() {
+    const {iniConfig, selectedSection, selectedSource, data } = this.state;
+    console.log("Remove clicked, selectedSection is " + selectedSection);
+    if(selectedSection && selectedSection !== ".") {
+      ini.deleteSection(iniConfig, selectedSection).then((newIniConfig) =>{
+        if(selectedSource) {
+          data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
+          data[selectedSource].changed = true;
+        }
+        console.log("Refreshing the tree");
+        this.setState({
+          iniConfig: Object.assign({}, newIniConfig),
+          refreshTree: true,
+          selectedSource: selectedSource,
+          selectedSection: null,
+          selectedData: null,
+          data: Object.assign({},data)});
+      });
+    }
+  }
+
   render() {
-    const { fetchingData, iniConfig, selectedSource, selectedSection, selectedData, showCommitModal, data, commitFiles } = this.state;
-
-
+    const {
+      fetchingData,
+      iniConfig,
+      refreshTree,
+      selectedSource,
+      selectedSection,
+      selectedData,
+      showCommitModal,
+      data,
+      commitFiles
+    } = this.state;
 
     var configDisplay;
     if(data) {
+      console.log("selectedSection: " + selectedSection);
+      console.log("selectedSource: " + selectedSource);
       if (selectedSection && selectedSection !== '.' && data[selectedSource]) {
-        console.log("selectedSource " + selectedSource + ", selectedSection " + selectedSection + " selectedData " + selectedData);
-        const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
-
+        // const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
+        const sourceSelectedLines = [0];
         configDisplay =
           <Tabs defaultActiveKey="config" id="uncontrolled-tab-example">
             <Tab eventKey="config" title="Config" className="configEditorTab">
@@ -350,17 +385,29 @@ class FieldExtractionTopConfig extends Component {
           </Tabs>
       }
       else if(data[selectedSource]){
-        console.log("selectedSource " + selectedSource + ", selectedSection " + selectedSection );
         configDisplay =
           <div ><FieldExtractionConfigEditor data={data[selectedSource].decoded} path={selectedSource} style={{flex: 1}}/></div>
       }
     }
 
     if (!fetchingData && iniConfig) {
+      const addEnabled = selectedSource && !selectedSection
+      const removeEnabled = selectedSource !== 'fieldextraction.properties.allextractors.web';
       return (
         <>
           <SplitPane defaultSize="20%" split="vertical">
-            <div className="extractorNavPanel"><FieldExtractionNavigationTree data={iniConfig} onSelect={this.onNavigatorSelect}/></div>
+            <div className="extractorNavPanel">
+              <Button size="sm" disabled={!addEnabled}>Add</Button>
+              <Button size="sm" disabled={!removeEnabled} onClick={() => this.removeSection()}>Remove</Button>
+              <FieldExtractionNavigationTree
+                data={iniConfig}
+                selectedSource={selectedSource || '.'}
+                selectedSection={selectedSection}
+                refresh={refreshTree}
+                onRefresh={() => this.setState({refreshTree: false})}
+                onSelect={this.onNavigatorSelect}
+              />
+            </div>
             {configDisplay}
           </SplitPane>
           <FieldExtractionCommitModal

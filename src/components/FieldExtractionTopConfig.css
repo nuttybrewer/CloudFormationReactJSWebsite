@@ -65,6 +65,12 @@
   display: flex;
 }
 
+.beardTree {
+  height: 100%;
+  width: 100%;
+  overflow: scroll;
+}
+
 .deniTree {
   height: 100%;
   width: 100%;
@@ -101,4 +107,9 @@
 
 .configEditorTab {
   height: 100%
+}
+
+.btn {
+  margin-right: 2px;
+  min-width: 6em;
 }

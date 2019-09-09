@@ -3,7 +3,7 @@
 
 const util = require('util');
 
-export default { deserialize, serialize };
+export default { deserialize, serialize, deleteSection };
 
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
@@ -48,11 +48,9 @@ function deserialize(obj, opt) {
   if(opt.section) {
     const section = obj[opt.section];
     if(section && section.children) {
-      console.log(Object.keys(section.children));
       const accumulator = Object.keys(section.children).reduce((ranges, attrKey) => {
         // Find the lowest starting line
         var lineCount = 0;
-        console.log("Counting: " + util.inspect(attrKey));
         var prevObject = section.children[attrKey].values[0].prevline;
         while (prevObject) {
           prevObject = prevObject.prevline
@@ -98,6 +96,94 @@ function emptyCallback(someval) {
   return { include_body: null, source: null};
 }
 
+function isComment(commentLineObject) {
+  if(commentLineObject.content) {
+    return commentLineObject.content.match(/^\s*(#|!)/);
+  }
+  return false;
+}
+
+function deleteCommentBlock(obj, commentLine) {
+  if(isComment(commentLine)){
+    if(commentLine.prevline) {
+      if(commentLine.nextline) {
+        commentLine.prevline.nextline = commentLine.nextline.prevline;
+        deleteCommentBlock(obj, commentLine.prevline)
+      }
+      else {
+        commentLine.prevline.nextline = null;
+      }
+    }
+    if(commentLine.nextline){
+      if(commentLine.prevline) {
+        commentLine.nextline.prevline = commentLine.prevline.nextline;
+        deleteCommentBlock(obj, commentLine.nextline)
+      }
+      else {
+        commentLine.nextline.prevline = null;
+      }
+    }
+    // Find the object and delete it.
+    obj["."].values.filter((line) => line.content === commentLine.content && line.value === commentLine.value && line.source === commentLine.source);
+  }
+}
+
+function cleanNullValues(obj) {
+  if(obj['.'] && Array.isArray(obj['.'].values)) {
+    obj['.'].values = obj['.'].values.filter(value => (value.nextline !== null && value.nextline !== null && value.source !== null))
+  }
+}
+
+function deleteValue(val) {
+  console.log("Remove " + val.virtualvalue + " value from linked list");
+  if (val.prevline) {
+    val.prevline.nextline = val.nextline;
+  }
+
+  if(val.nextline) {
+    val.nextline.prevline = val.prevline;
+  }
+  val.prevline = null;
+  val.nextline = null;
+  val.source = null;
+}
+
+function deleteSection(obj, sectionkey) {
+  const section = obj[sectionkey];
+  console.log("Remove section " + sectionkey);
+  return new Promise((resolve) => {
+    if (section.values) {
+      console.log("Remove values for section " + sectionkey);
+      section.values.forEach((value) => deleteValue(value));
+      section.values = null // Re-assign the vals will dereference them
+    }
+
+    if(section.type) {
+      console.log("Remove section type attribute for " + sectionkey);
+      section.type = null;
+    }
+
+    // We need to delete the section's valueObjects first to get rid of the serialization
+    if (section.children) {
+      console.log("Remove children for section " + sectionkey);
+      Object.keys(section.children).forEach((childkey) => {
+        console.log("Remove values for child " + childkey);
+        // Remove each line from the file
+        if(section.children[childkey].values) {
+          console.log("Removing values for child " + childkey)
+          section.children[childkey].values.forEach((valueItem) => deleteValue(valueItem));
+          section.children[childkey] = null;
+        }
+      });
+      section.children = null;
+    }
+    cleanNullValues(obj);
+    obj[sectionkey] = null;
+    delete obj[sectionkey];
+    resolve(obj);
+  });
+
+}
 // properties = {
 //   key: {
 //     type: "attribute | section | include",

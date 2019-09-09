@@ -16,7 +16,6 @@ class FieldExtractionConfigEditor extends Component {
   componentDidUpdate(prevProps) {
     const { editor } = this.state;
     const { lines } = this.props;
-    console.log(util.inspect(lines));
     if (lines) {
       const position = new Position(lines[0],1);
       const selections = lines.map((line) => {
@@ -30,9 +29,7 @@ class FieldExtractionConfigEditor extends Component {
     }
   }
   onEditorDidMount(_, editor) {
-    console.log("editorDidMount");
     this.setState({editor: editor});
-
     // editor.focus();
   }
 
