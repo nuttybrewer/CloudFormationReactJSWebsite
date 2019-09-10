@@ -42,7 +42,6 @@ class FieldExtractionTopConfig extends Component {
       data: {},
       iniConfig: null,
       fetchingData: false,
-      refreshTree: false,
       selectedSource: null,
       selectedData: null,
       selectedSection: null,
@@ -271,35 +270,31 @@ class FieldExtractionTopConfig extends Component {
         if (section.children.type.values[0].value === "morphlines") {
           const confPath = section.children.configFile.values[0].virtualvalue;
           if (data[confPath]) {
-            return this.setState({
-              refreshTree: false,
+            return this.setState(() => ({
               selectedSource: selected.source,
               selectedData: confPath,
               selectedSection: selected.section,
-            })
+            }))
           }
           else {
             // Load up the
             return this.loadMorphline(confPath)
               .then((res) => {
-                this.setState({
-                  refreshTree: false,
+                this.setState(() => ({
                   selectedSource: selected.source,
                   selectedData: confPath,
                   selectedSection: selected.section,
-                })
+                }))
               });
           }
         }
       }
     }
-    else {
-      this.setState({
-        refreshTree: false,
-        selectedSource: selected.source,
-        selectedSection: selected.section,
-      });
-    }
+    this.setState(() => ({
+      selectedSource: selected.source,
+      selectedSection: selected.section,
+      selectedData: null
+    }));
   }
 
   onCloseCommitModal() {
@@ -323,10 +318,8 @@ class FieldExtractionTopConfig extends Component {
           data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
           data[selectedSource].changed = true;
         }
-        console.log("Refreshing the tree");
         this.setState({
           iniConfig: Object.assign({}, newIniConfig),
-          refreshTree: true,
           selectedSource: selectedSource,
           selectedSection: null,
           selectedData: null,
@@ -339,7 +332,6 @@ class FieldExtractionTopConfig extends Component {
     const {
       fetchingData,
       iniConfig,
-      refreshTree,
       selectedSource,
       selectedSection,
       selectedData,
@@ -355,34 +347,48 @@ class FieldExtractionTopConfig extends Component {
       if (selectedSection && selectedSection !== '.' && data[selectedSource]) {
         // const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
         const sourceSelectedLines = [0];
-        configDisplay =
-          <Tabs defaultActiveKey="config" id="uncontrolled-tab-example">
-            <Tab eventKey="config" title="Config" className="configEditorTab">
-              <div className="FEConfigForm">
-                <FieldExtractionExtractorConfigForm
-                  section={iniConfig[selectedSection]}
-                  config={ data[selectedData]? data[selectedData].decoded : null }
-                  changed={data[selectedData]? data[selectedData].changed : null}
-                  path={ selectedData }
-                  updateMorphline={this.updateData}
-                  commitMorphline={this.showCommitModal}/>
-              </div>
-            </Tab>
-            <Tab eventKey="ini" title="Ini">
-              <FieldExtractionConfigEditor
-                data={data[selectedSource].decoded}
-                onChange={this.updateData}
-                style={{flex: 1}}
-                lines={sourceSelectedLines}
-              />
-            </Tab>
-            <Tab eventKey="test" title="Test" className="configEditorTab">
-              <FieldExtractionTestPanel
-                path={selectedData}
-                testApi={this.validateMorphline}
-              />
-            </Tab>
-          </Tabs>
+        if(iniConfig[selectedSection].children && iniConfig[selectedSection].children.configFile){
+          configDisplay =
+            <Tabs defaultActiveKey="config" id="uncontrolled-tab-example">
+              <Tab eventKey="config" title="Config" className="configEditorTab">
+                <div className="FEConfigForm">
+                  <FieldExtractionExtractorConfigForm
+                    section={iniConfig[selectedSection]}
+                    config={ data[selectedData]? data[selectedData].decoded : null }
+                    changed={data[selectedData]? data[selectedData].changed : null}
+                    path={ selectedData }
+                    updateMorphline={this.updateData}
+                    commitMorphline={this.showCommitModal}/>
+                </div>
+              </Tab>
+              <Tab eventKey="ini" title="Ini">
+                <FieldExtractionConfigEditor
+                  data={data[selectedSource].decoded}
+                  onChange={this.updateData}
+                  style={{flex: 1}}
+                  lines={sourceSelectedLines}
+                />
+              </Tab>
+              <Tab eventKey="test" title="Test" className="configEditorTab">
+                <FieldExtractionTestPanel
+                  path={selectedData}
+                  testApi={this.validateMorphline}
+                />
+              </Tab>
+            </Tabs>
+        }
+        else {
+          configDisplay =
+            <div className="FEConfigForm">
+              <FieldExtractionExtractorConfigForm
+                section={iniConfig[selectedSection]}
+                config={ data[selectedSource]? data[selectedSource].decoded : null }
+                changed={data[selectedSource]? data[selectedSource].changed : null}
+                path={ selectedSource }
+                updateMorphline={this.updateData}
+                commitMorphline={this.showCommitModal}/>
+            </div>
+        }
       }
       else if(data[selectedSource]){
         configDisplay =
@@ -403,8 +409,6 @@ class FieldExtractionTopConfig extends Component {
                 data={iniConfig}
                 selectedSource={selectedSource || '.'}
                 selectedSection={selectedSection}
-                refresh={refreshTree}
-                onRefresh={() => this.setState({refreshTree: false})}
                 onSelect={this.onNavigatorSelect}
               />
             </div>
