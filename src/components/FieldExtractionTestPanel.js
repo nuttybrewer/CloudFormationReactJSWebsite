@@ -96,7 +96,7 @@ class FieldExtractionTestPanel extends Component {
     const { path } = this.props;
     const { results, logs, cachedLogs, disableTest } = this.state;
     var jsonResults;
-    console.log("Parse Results: " + util.inspect(results));
+    
     if(results) {
       if(results.extracted) {
         jsonResults =

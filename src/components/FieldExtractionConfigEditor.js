@@ -35,7 +35,9 @@ class FieldExtractionConfigEditor extends Component {
 
   onEditorChange (ev, value) {
     const { onChange, path } = this.props;
-    onChange(value, path);
+    if(onChange) {
+      onChange(value, path);
+    }
   }
 
 

@@ -75,7 +75,6 @@ class FieldExtractionTopConfig extends Component {
 
   getExtractorTopConfig() {
     const { reponame, branch, onGithubError } = this.props;
-    console.log("Reloading top config");
     if(reponame && branch) {
       this.setState({fetchingData: true})
       this.getContents('fieldextraction.properties.allextractors.web', "ini")
@@ -158,7 +157,6 @@ class FieldExtractionTopConfig extends Component {
       morphline: Buffer.from(data[path].decoded).toString('base64'),
       logs: logs
     }
-    console.log("Axios: Submitting " + JSON.stringify(postMorphline));
     return axios.post('/api/hcon', postMorphline);
   }
 
@@ -166,7 +164,6 @@ class FieldExtractionTopConfig extends Component {
     // Remove the contents from the data to force it to get reloaded
     // since SHA hash will have changed
     return new Promise((resolve, reject) => {
-      console.log("Commiting morphlines: " + files);
       this.commitContents(files, message)
         .then(() => {
           this.setState({showCommitModal: false});
@@ -209,7 +206,6 @@ class FieldExtractionTopConfig extends Component {
                     })
                     .then(ret => {
                       const type = data.type;
-                      console.log("Deleting from the cache: " + path)
                       delete data[path];
                       this.getContents(path, type).then((content) => resolveCommit(content)).catch((error) => rejectCommit(error));
                     }).catch(error => {
@@ -261,8 +257,6 @@ class FieldExtractionTopConfig extends Component {
 
   onNavigatorSelect(selected) {
     const { iniConfig, data } = this.state;
-    console.log("Top Config NavSelect: selected.source: " + selected.source +
-      " selected.section: " + selected.section);
 
     if (selected.section) {
       const section = iniConfig[selected.section];
@@ -311,9 +305,8 @@ class FieldExtractionTopConfig extends Component {
 
   removeSection() {
     const {iniConfig, selectedSection, selectedSource, data } = this.state;
-    console.log("Remove clicked, selectedSection is " + selectedSection);
     if(selectedSection && selectedSection !== ".") {
-      ini.deleteSection(iniConfig, selectedSection).then((newIniConfig) =>{
+      ini.deleteSection(iniConfig, selectedSection).then((newIniConfig) => {
         if(selectedSource) {
           data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
           data[selectedSource].changed = true;
@@ -328,6 +321,29 @@ class FieldExtractionTopConfig extends Component {
     }
   }
 
+  addSection() {
+    const {iniConfig, selectedSource, data} = this.state;
+    const sectionKey = 'bash_foobar';
+    const sectionvals = {
+      type: 'grok',
+      name: 'patnewsection',
+      version: 1,
+      grokPattern: '^%{FOO:[^,]},%{BAR:[\\w+]}'
+    }
+    if(selectedSource) {
+      ini.addSection(iniConfig, sectionKey, sectionvals, selectedSource).then((newIniConfig) => {
+        console.log("addSectionResults " + util.inspect(newIniConfig[sectionKey].children, {depth: 3}))
+        data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
+        data[selectedSource].changed = true;
+        this.setState({
+          iniConfig: Object.assign({}, newIniConfig),
+          selectedSource: selectedSource,
+          selectedSection: sectionKey,
+          data: Object.assign({}, data)
+        });
+      })
+    }
+  }
   render() {
     const {
       fetchingData,
@@ -342,11 +358,9 @@ class FieldExtractionTopConfig extends Component {
 
     var configDisplay;
     if(data) {
-      console.log("selectedSection: " + selectedSection);
-      console.log("selectedSource: " + selectedSource);
       if (selectedSection && selectedSection !== '.' && data[selectedSource]) {
         // const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
-        const sourceSelectedLines = [0];
+        const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection, source: selectedSource}).ranges[selectedSource];
         if(iniConfig[selectedSection].children && iniConfig[selectedSection].children.configFile){
           configDisplay =
             <Tabs defaultActiveKey="config" id="uncontrolled-tab-example">
@@ -355,24 +369,24 @@ class FieldExtractionTopConfig extends Component {
                   <FieldExtractionExtractorConfigForm
                     section={iniConfig[selectedSection]}
                     config={ data[selectedData]? data[selectedData].decoded : null }
-                    changed={data[selectedData]? data[selectedData].changed : null}
+                    changed={ data[selectedData]? data[selectedData].changed : null }
                     path={ selectedData }
-                    updateMorphline={this.updateData}
-                    commitMorphline={this.showCommitModal}/>
+                    updateMorphline={ this.updateData }
+                    commitMorphline={ this.showCommitModal }/>
                 </div>
               </Tab>
               <Tab eventKey="ini" title="Ini">
                 <FieldExtractionConfigEditor
-                  data={data[selectedSource].decoded}
-                  onChange={this.updateData}
-                  style={{flex: 1}}
-                  lines={sourceSelectedLines}
+                  data={ data[selectedSource].decoded }
+                  onChange={ this.updateData }
+                  style={ {flex: 1} }
+                  lines={ sourceSelectedLines }
                 />
               </Tab>
               <Tab eventKey="test" title="Test" className="configEditorTab">
                 <FieldExtractionTestPanel
-                  path={selectedData}
-                  testApi={this.validateMorphline}
+                  path={ selectedData }
+                  testApi={ this.validateMorphline }
                 />
               </Tab>
             </Tabs>
@@ -383,16 +397,22 @@ class FieldExtractionTopConfig extends Component {
               <FieldExtractionExtractorConfigForm
                 section={iniConfig[selectedSection]}
                 config={ data[selectedSource]? data[selectedSource].decoded : null }
-                changed={data[selectedSource]? data[selectedSource].changed : null}
+                changed={ data[selectedSource]? data[selectedSource].changed : null }
                 path={ selectedSource }
-                updateMorphline={this.updateData}
-                commitMorphline={this.showCommitModal}/>
+                updateMorphline={ this.updateData }
+                commitMorphline={ this.showCommitModal }
+                lines={ sourceSelectedLines } />
             </div>
         }
       }
       else if(data[selectedSource]){
         configDisplay =
-          <div ><FieldExtractionConfigEditor data={data[selectedSource].decoded} path={selectedSource} style={{flex: 1}}/></div>
+          <div >
+            <FieldExtractionConfigEditor
+              data={ data[selectedSource].decoded }
+              path={ selectedSource }
+              style={ {flex: 1} }/>
+          </div>
       }
     }
 
@@ -403,7 +423,7 @@ class FieldExtractionTopConfig extends Component {
         <>
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
-              <Button size="sm" disabled={!addEnabled}>Add</Button>
+              <Button size="sm" disabled={!addEnabled} onClick={() => this.addSection()}>Add</Button>
               <Button size="sm" disabled={!removeEnabled} onClick={() => this.removeSection()}>Remove</Button>
               <FieldExtractionNavigationTree
                 data={iniConfig}

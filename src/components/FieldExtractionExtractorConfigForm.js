@@ -3,6 +3,9 @@ import { Form, InputGroup, Button} from 'react-bootstrap';
 import { ControlledEditor } from '@monaco-editor/react';
 // import util from 'util'
 
+import FieldExtractionConfigEditor from './FieldExtractionConfigEditor'
+
+
 class FieldExtractionExtractorConfigForm extends React.Component {
   constructor(props) {
     super(props);
@@ -33,7 +36,7 @@ class FieldExtractionExtractorConfigForm extends React.Component {
   }
 
   render() {
-    const { config, section, changed } = this.props;
+    const { config, section, changed, lines } = this.props;
     // Global Extractor properties
     const name = section.children.name ? section.children.name.values[0].value : null;
     const version = section.children.version ? section.children.version.values[0].value : null;
@@ -44,14 +47,23 @@ class FieldExtractionExtractorConfigForm extends React.Component {
     // const grokPatternFiles= section.children.grokPatternFiles ? section.children.grokPatternFiles.values[0].value : null;
 
     var typeFormGroup;
+    var editor;
     if (type === 'morphlines') {
       typeFormGroup =
-              <InputGroup size="sm" className="morphlineMenuBarName">
+              (<InputGroup size="sm" className="morphlineMenuBarName">
                 <InputGroup.Prepend>
                 <InputGroup.Text id="extractorMorphline" >configFile: </InputGroup.Text>
                 </InputGroup.Prepend>
                 <Form.Control type="text" readOnly placeholder="Extractor name..." aria-label="Config File:" aria-describedby="extractorMorphline" autoComplete="off" value={configFile}/>
-              </InputGroup>
+              </InputGroup>);
+      editor =   config ? (
+                  <ControlledEditor
+                    height="100vh"
+                    value={config}
+                    onChange={this.handleEditorChange}
+                    editorDidMount={this.handleEditorDidMount}
+                  />
+                ) : ('')
     }
     else if (type === 'grok') {
       typeFormGroup =
@@ -61,6 +73,11 @@ class FieldExtractionExtractorConfigForm extends React.Component {
               </InputGroup.Prepend>
               <Form.Control type="text" readOnly placeholder="Extractor name..." aria-label="Grok Pattern:" aria-describedby="extractorGrokPattern" autoComplete="off" value={grokPattern}/>
             </InputGroup>
+      editor = config ? (
+            <FieldExtractionConfigEditor
+              data={ config }
+              lines={ lines }
+              style={ {flex: 1} }/> ): ''
     }
 
     return (
@@ -92,14 +109,7 @@ class FieldExtractionExtractorConfigForm extends React.Component {
         <Button size="sm" variant="dark" disabled={!changed} onClick={this.onShowCommitModal}>Commit</Button>
       </Form>
       </div>
-      { config ? (
-        <ControlledEditor
-          height="100vh"
-          value={config}
-          onChange={this.handleEditorChange}
-          editorDidMount={this.handleEditorDidMount}
-        />
-      ) : ('')}
+      { editor }
       </>
     );
   }

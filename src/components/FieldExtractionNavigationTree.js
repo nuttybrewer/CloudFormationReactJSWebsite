@@ -84,12 +84,10 @@ class FieldExtractionNavigationTree extends Component {
             return false;
           }
           return Object.keys(vendors).filter((vendor) => {
-            // console.log("Comparing " + val.source + " to vendor source entry: " + vendors[vendor].source);
             return val.source === vendors[vendor].source
           }).length === 0;
         });
         emptySections.forEach((sectionVal) => {
-          console.log("Leftover sources: " + sectionVal.source);
           vendors[sectionVal.source] = {
             key: sectionVal.source,
             source: sectionVal.source,
@@ -98,7 +96,6 @@ class FieldExtractionNavigationTree extends Component {
             decorators: {...decorators, Header}
           };
         });
-        // console.log("Vendors: " + util.inspect(Object.keys(vendors).map((entryKey) => vendors[entryKey]),{depth:3}))
       }
 
       this.setState( {
@@ -119,7 +116,6 @@ class FieldExtractionNavigationTree extends Component {
 
 
   componentDidUpdate(prevProps) {
-    console.log("Tree did update");
     const { data } = this.props;
     if( data !== prevProps.data) {
       this.convertIni();
@@ -138,7 +134,6 @@ class FieldExtractionNavigationTree extends Component {
   onToggle(node, toggled){
       const { selectedNodeName, treedata } = this.state;
       const { onSelect } = this.props;
-      console.log("onToggle for " + node.name)
       if (selectedNodeName) {
         this.unselectNode(treedata);
       }

@@ -3,7 +3,7 @@
 
 const util = require('util');
 
-export default { deserialize, serialize, deleteSection };
+export default { deserialize, serialize, deleteSection, addSection };
 
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
@@ -51,6 +51,8 @@ function deserialize(obj, opt) {
       const accumulator = Object.keys(section.children).reduce((ranges, attrKey) => {
         // Find the lowest starting line
         var lineCount = 0;
+        console.log("deserialize line count, attribute is " + attrKey);
+        console.log("children values are " + util.inspect(section.children[attrKey], {depth: 2}))
         var prevObject = section.children[attrKey].values[0].prevline;
         while (prevObject) {
           prevObject = prevObject.prevline
@@ -134,18 +136,75 @@ function cleanNullValues(obj) {
   }
 }
 
-function deleteValue(val) {
+function addSection(obj, sectionkey, sectionvals, source, lineObj=null) {
+
+  console.log("sectionKey: " + sectionkey);
+  console.log("sectionvals: " + util.inspect(sectionvals));
+  console.log("source: " + source);
+  if(obj[sectionkey]) {
+    throw new Error(sectionkey + " already exists inside INI object");
+  }
+  return new Promise((resolve) =>{
+    var prevLine = lineObj || findSourceEndLineObject(obj, source);
+    obj[sectionkey] = {};
+    obj[sectionkey].values = [];
+    obj[sectionkey].type = "section";
+    obj[sectionkey].children = {};
+    Object.keys(sectionvals).forEach((sectionvalkey) => {
+        console.log("Creating a value for " + sectionvalkey);
+        const val = {};
+        val.content = sectionkey + "." + sectionvalkey + " = "; // Assume it's not an array?
+        const lit = literalize(sectionvals[sectionvalkey])
+        val.value = lit.value;
+        val.literal = lit.literal;
+        val.source = source;
+        obj[sectionkey].children[sectionvalkey] = {type: 'attributes', values: [val]};
+        insertValue(obj, val, prevLine);
+        prevLine = val;
+    });
+    substitute(obj, { environment: {}}) // This needs to be generalized
+    resolve(obj);
+  });
+}
+
+function findSourceStartLineObject(obj, source) {
+  return obj['.'].values.find((value) => value.source === source && value.prevline === null);
+}
+
+function findSourceEndLineObject(obj, source) {
+  // The last line might not be in the general '.' section,
+  // so go looking for any line in that section and dig down from there
+  var  referenceLine = obj['.'].values.find((value) => value.source === source);
+  while(referenceLine.nextline) {
+    referenceLine = referenceLine.nextline;
+  }
+  return referenceLine;
+}
+
+function insertValue(obj, val, prev) {
+  console.log("Add " + val.value + " value from linked list");
+  if(val.source === prev.source) {
+    val.nextline = prev.nextline;
+    if(val.nextline) {
+      val.nextline.prevline = val;
+    }
+    val.prevline = prev;
+    if(prev) {
+      prev.nextline = val;
+    }
+  }
+}
+
+function deleteValue(obj, val) {
   console.log("Remove " + val.virtualvalue + " value from linked list");
   if (val.prevline) {
     val.prevline.nextline = val.nextline;
   }
-
   if(val.nextline) {
     val.nextline.prevline = val.prevline;
   }
-  val.prevline = null;
-  val.nextline = null;
-  val.source = null;
+  const index = obj['.'].values.indexOf(val);
+  obj['.'].values.splice(index, 1);
 }
 
 function deleteSection(obj, sectionkey) {
@@ -154,7 +213,12 @@ function deleteSection(obj, sectionkey) {
   return new Promise((resolve) => {
     if (section.values) {
       console.log("Remove values for section " + sectionkey);
-      section.values.forEach((value) => deleteValue(value));
+      section.values.forEach((value) => {
+        deleteValue(value);
+        const removeme = section.values.indexOf(value);
+        section.values.splice(removeme, 1);
+      });
+
       section.values = null // Re-assign the vals will dereference them
     }
 
@@ -171,13 +235,12 @@ function deleteSection(obj, sectionkey) {
         // Remove each line from the file
         if(section.children[childkey].values) {
           console.log("Removing values for child " + childkey)
-          section.children[childkey].values.forEach((valueItem) => deleteValue(valueItem));
+          section.children[childkey].values.forEach((valueItem) => deleteValue(obj, valueItem));
           section.children[childkey] = null;
         }
       });
       section.children = null;
     }
-    cleanNullValues(obj);
     obj[sectionkey] = null;
     delete obj[sectionkey];
     resolve(obj);
@@ -337,16 +400,10 @@ function serialize (str, opt) {
     const keycontent = line.match(keywithassignmentandwhitespace);
 
     // Convert value to native JSON types
-    switch (value) {
-      case 'true':
-      case 'false':
-      case 'null':
-      case 'undefined':
-        value = JSON.parse(value);
-        literal = true
-        break;
-      default:
-    }
+    const literalized = literalize(value);
+    value = literalized.value;
+    literal = literalized.literal;
+
 
     const val = {
       value: value,
@@ -440,6 +497,25 @@ function isQuoted (val) {
 //       ? JSON.stringify(val)
 //       : val.replace(/;/g, '\\;').replace(/#/g, '\\#')
 // }
+
+function literalize(value) {
+  const ret = {};
+  console.log("Literalizing " + value);
+  // Convert value to native JSON types
+  switch (value) {
+    case 'true':
+    case 'false':
+    case 'null':
+    case 'undefined':
+      ret.value = JSON.parse(value);
+      ret.literal = true;
+      break;
+    default:
+      ret.value = value;
+      ret.literal = false;
+  }
+  return ret;
+}
 
 function unsafe (val, doUnesc) {
   val = (val || '').trim()
