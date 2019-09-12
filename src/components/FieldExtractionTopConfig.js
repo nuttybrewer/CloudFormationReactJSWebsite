@@ -15,9 +15,6 @@ import FieldExtractionTestPanel from './FieldExtractionTestPanel';
 
 import LoadingSpinner from './LoadingSpinner';
 
-
-
-
 // data: {
 //   decoded: <decoded content for getContents() below>
 //   path: <path in Github repository>
@@ -64,14 +61,46 @@ class FieldExtractionTopConfig extends Component {
     }
   }
 
+  // Loads files from Github into the data state variable
+  getContents(path, type) {
+    const { client, reponame, owner, branch } = this.props;
+    const { data } = this.state;
+    return new Promise((resolve, reject) => {
+      // Check if the ini file is already in the data structure
+      if(data[path]) {
+        return resolve({decoded: data[path].decoded, raw: data[path].raw, path: path})
+      }
+      if(reponame && branch) {
+        client.repos.getContents({owner: owner, repo: reponame, ref: branch, path: path})
+        .then(raw => {
+          var content = null;
+          var decodedContent = null;
+          if (raw.data.size < 100000 && raw.data.encoding === 'base64'){
+            content = raw.data.content;
+            decodedContent = new Buffer(raw.data.content, 'base64').toString('ascii');
+          }
+          else {
+            console.log("Not decoding, size too big: " + raw.data.size );
+          }
+          data[path] = { raw: content, decoded: decodedContent, sha: raw.data.sha, type: type, changed: false, vcs: 'github'}
+          this.setState({data: data});
+          return resolve({ decoded: decodedContent, raw: raw.data.content, path: path});
+        }).catch(error => {
+          return reject(error);
+        });
+      }
+    });
+  }
+
   getIncludes(val)  {
     return new Promise((resolve, reject) => {
       return this.getContents(val.virtualvalue, "ini")
       .then(includeContent => {
-          resolve({source:val.virtualvalue, include_body: includeContent.decoded});
+          return resolve({source:val.virtualvalue, include_body: includeContent.decoded});
         });
     });
   }
+
 
   getExtractorTopConfig() {
     const { reponame, branch, onGithubError } = this.props;
@@ -221,33 +250,10 @@ class FieldExtractionTopConfig extends Component {
           })
         }) // Promise.all
       ).then(() => resolve())
-      .catch((err) => reject(err)) // Promise
-    });
-  }
-
-  getContents(path, type) {
-    const { client, reponame, owner, branch } = this.props;
-    const { data } = this.state;
-    return new Promise((resolve, reject) => {
-      if(reponame && branch) {
-        client.repos.getContents({owner: owner, repo: reponame, ref: branch, path: path})
-        .then(raw => {
-          var content = null;
-          var decodedContent = null;
-          if (raw.data.size < 100000 && raw.data.encoding === 'base64'){
-            content = raw.data.content;
-            decodedContent = new Buffer(raw.data.content, 'base64').toString('ascii');
-          }
-          else {
-            console.log("Not decoding, size too big: " + raw.data.size );
-          }
-          data[path] = { raw: content, decoded: decodedContent, sha: raw.data.sha, type: type, changed: false}
-          this.setState({data: data});
-          return resolve({ decoded: decodedContent, raw: raw.data.content, path: path});
-        }).catch(error => {
-          return reject(error);
-        });
-      }
+      .catch((err) => {
+        console.log(`Error on commit ${err.message}`)
+        return reject(err)
+      }) // Promise
     });
   }
 
@@ -257,7 +263,6 @@ class FieldExtractionTopConfig extends Component {
 
   onNavigatorSelect(selected) {
     const { iniConfig, data } = this.state;
-
     if (selected.section) {
       const section = iniConfig[selected.section];
       if(section && section.children) {
@@ -321,6 +326,38 @@ class FieldExtractionTopConfig extends Component {
     }
   }
 
+  onAddClicked() {
+    const { selectedSource } = this.state;
+    if(selectedSource === 'fieldextraction.properties.allextractors.web') {
+      return this.addVendor();
+    }
+    return this.addSection();
+  }
+
+  addVendor() {
+    // Add include to the data structure first
+    const { data, iniConfig } = this.state;
+    /*eslint no-template-curly-in-string: "off"*/
+    const path = "${basepath}/vendor/newvendor.properties"
+    ini.addInclude(iniConfig, path, {basepath: 'versions/1.5'}).then((newInclude) => {
+      data[newInclude.virtualvalue] = {};
+      data[newInclude.virtualvalue].decoded = '';
+      data[newInclude.virtualvalue].changed = true;
+      data[newInclude.virtualvalue].type = 'ini';
+      ini.addInclude(iniConfig, path, { basepath: 'versions/1.5' } );
+
+      // Re-render top level config
+      data['fieldextraction.properties.allextractors.web'].decoded = ini.deserialize(iniConfig, {source: 'fieldextraction.properties.allextractors.web'}).data;
+      data['fieldextraction.properties.allextractors.web'].changed = true;
+      this.setState({
+        data: data,
+        iniConfig: Object.assign({}, iniConfig),
+        selectedSource: newInclude.virtualvalue
+      })
+    });
+
+  }
+
   addSection() {
     const {iniConfig, selectedSource, data} = this.state;
     const sectionKey = 'bash_foobar';
@@ -332,7 +369,6 @@ class FieldExtractionTopConfig extends Component {
     }
     if(selectedSource) {
       ini.addSection(iniConfig, sectionKey, sectionvals, selectedSource).then((newIniConfig) => {
-        console.log("addSectionResults " + util.inspect(newIniConfig[sectionKey].children, {depth: 3}))
         data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
         data[selectedSource].changed = true;
         this.setState({
@@ -423,7 +459,7 @@ class FieldExtractionTopConfig extends Component {
         <>
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
-              <Button size="sm" disabled={!addEnabled} onClick={() => this.addSection()}>Add</Button>
+              <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
               <Button size="sm" disabled={!removeEnabled} onClick={() => this.removeSection()}>Remove</Button>
               <FieldExtractionNavigationTree
                 data={iniConfig}
