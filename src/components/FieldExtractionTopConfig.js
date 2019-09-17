@@ -31,7 +31,7 @@ class FieldExtractionTopConfig extends Component {
     this.loadMorphline = this.loadMorphline.bind(this);
     this.updateData = this.updateData.bind(this);
     this.validateMorphline = this.validateMorphline.bind(this);
-    this.commitMorphline = this.commitMorphline.bind(this);
+    this.submitCommit = this.submitCommit.bind(this);
     this.onCloseCommitModal = this.onCloseCommitModal.bind(this);
     this.showCommitModal = this.showCommitModal.bind(this);
     this.removeSection = this.removeSection.bind(this);
@@ -44,8 +44,7 @@ class FieldExtractionTopConfig extends Component {
       selectedSection: null,
       changesPending: false,
       reloadAll: false,
-      showCommitModal: false,
-      commitFiles: []
+      showCommitModal: false
     }
   }
 
@@ -189,72 +188,131 @@ class FieldExtractionTopConfig extends Component {
     return axios.post('/api/hcon', postMorphline);
   }
 
-  commitMorphline(files, message, callback) {
-    // Remove the contents from the data to force it to get reloaded
-    // since SHA hash will have changed
+  submitCommit(changedfiles = null, deletedfiles = null, message = null) {
+    this.setState({showCommitModal: false});
+    const { data } = this.state;
     return new Promise((resolve, reject) => {
-      this.commitContents(files, message)
+      this.commitContents(changedfiles, message)
         .then(() => {
-          this.setState({showCommitModal: false});
-          resolve();
+          this.deleteContents(deletedfiles, message)
+          .then(() => {
+            Object.keys(data).forEach((itemKey) => {
+              if(data[itemKey].deleted) {
+                delete data[itemKey]
+              }
+            })
+            this.setState({
+              data: Object.assign({}, data)
+            })
+            resolve()
+          })
+          .catch((e) => {console.log("deleteContents failed: " + e.message); reject(e)})
         })
         .catch((error) => {
-          console.log("commitMorphline failed: " + error.message);
+          console.log("commitContents failed: " + error.message);
           reject(error);
         });
     });
+  }
 
+  deleteContents(files, message) {
+    const { client, reponame, owner, branch } = this.props;
+    const { data } = this.state;
+
+    if (! files || files.length === 0) {
+      return new Promise((resolve) => resolve());
+    }
+    return new Promise((resolve, reject) => {
+      const path = files.pop();
+      client.repos.getContents({
+        owner:owner,
+        repo: reponame,
+        path: path
+      }).then((file) => {
+          client.repos.deleteFile({
+            owner: owner,
+            repo: reponame,
+            path: path,
+            branch: branch,
+            sha: data[path].sha,
+            message: message,
+            committer: { name: 'BobSquarePants', email: 'scooby@do.tv'}
+          }).then(() => {
+            if(files.length > 0) {
+              this.deleteContents(files, message);
+            }
+            resolve();
+          })
+      })
+    });
   }
 
   commitContents(files, message) {
     this.setState({showCommitModal: false});
     const { client, reponame, owner, branch } = this.props;
     const { data } = this.state;
+
+    const filesToCommit = [];
+    if (! files || files.length === 0) {
+      return new Promise((resolve) => resolve());
+    }
     return new Promise((resolve, reject) => {
-      return Promise.all(
-        files.map((path) => {
-          return new Promise((resolveCommit, rejectCommit) => {
-            this.validateMorphline(path)
-              .then(res => {
-                if( data[path] && !data[path].changed) {
-                  return resolveCommit({});
-                }
-                if(reponame && branch) {
-                  client.repos.getContents({owner: owner, repo: reponame, ref: branch, path: path})
-                  .then(orig => {
-                    client.repos.createOrUpdateFile({
-                      owner: owner,
-                      repo: reponame,
-                      branch: branch,
-                      path: path,
-                      content: Buffer.from(data[path].decoded).toString('base64'),
-                      sha: orig.data.sha,
-                      author: { name: "None", email:"example@the.net"},
-                      commiter: { name: "None", email: "example@the.net"},
-                      message: message
-                    })
-                    .then(ret => {
-                      const type = data.type;
-                      delete data[path];
-                      this.getContents(path, type).then((content) => resolveCommit(content)).catch((error) => rejectCommit(error));
-                    }).catch(error => {
-                      return rejectCommit(error);
-                    }); //createOrUpdateFile
-                  })
-                  .catch((error) => rejectCommit(error));
-                } // If
-              }).catch((validateError) => {
-                console.log("Morphline validation failed " + util.inspect(validateError));
-                rejectCommit(validateError)
+      client.git.getRef({
+        owner:owner,
+        repo: reponame,
+        ref: `heads/${branch}`}
+      ).then((ref) => {
+          return Promise.all(
+            files.map((path) => {
+              return client.git.createBlob({
+                owner: owner,
+                repo: reponame,
+                content: data[path].decoded
               })
-          })
-        }) // Promise.all
-      ).then(() => resolve())
-      .catch((err) => {
-        console.log(`Error on commit ${err.message}`)
-        return reject(err)
-      }) // Promise
-    });
+              .then((blob) => {
+                filesToCommit.push({
+                  sha: blob.data.sha,
+                  path: path,
+                  mode: '100644',
+                  type: 'blob'
+                });
+              })
+            })
+          ).then( () =>
+            client.git.createTree({
+              owner:owner,
+              repo:reponame,
+              tree: filesToCommit,
+              base_tree: ref.data.object.sha
+            }).then((tree) =>
+              client.git.createCommit({
+                owner: owner,
+                repo:reponame,
+                message: message,
+                tree: tree.data.sha,
+                parents: [ref.data.object.sha]
+              }).then((commit) =>
+                client.git.updateRef({
+                  owner: owner,
+                  repo: reponame,
+                  ref: `heads/${branch}`,
+                  sha: commit.data.sha
+                }).then(() => {
+                  files.forEach((item) => {
+                    data[item].changed = false
+                  })
+                  this.setState({data: data});
+                  resolve();
+                })
+              )
+            )
+          )
+      })
+      .catch((error) => {
+        console.log(`Commit failed ${error.message}`);
+        reject(error)
+      })
+    })
   }
 
   onEditorChange(newData, e) {
@@ -297,24 +355,65 @@ class FieldExtractionTopConfig extends Component {
   }
 
   onCloseCommitModal() {
-    this.setState({showCommitModal: false, disableCommit: false});
+    this.setState({
+      showCommitModal: false,
+      disableCommit: false,
+    });
   }
 
   showCommitModal(path) {
-    const { data } = this.state;
     this.setState({
-      showCommitModal: true,
-      commitFiles: ([path] || Object.keys(data).filter((itemKey) => { return data[itemKey].changed }))
+      showCommitModal: true
     });
+  }
+
+  onRemoveClicked() {
+    const { selectedSection } = this.state;
+    if(selectedSection && selectedSection !== ".") {
+      this.removeSection();
+    }
+    else {
+      this.removeSource();
+    }
+  }
+
+  removeSource() {
+    const { iniConfig, selectedSection, selectedSource, data } = this.state;
+    if (selectedSection) {
+      return;
+    }
+    ini.removeInclude(iniConfig, selectedSource).then((obj) => {
+      data[selectedSource].decoded = null;
+      data[selectedSource].raw = null;
+      data[selectedSource].changed = false;
+      data[selectedSource].deleted = true;
+
+      // Re-render top level config
+      data['fieldextraction.properties.allextractors.web'].decoded = ini.deserialize(iniConfig, {source: 'fieldextraction.properties.allextractors.web'}).data;
+      data['fieldextraction.properties.allextractors.web'].changed = true;
+
+      this.setState({
+          data: Object.assign({}, data),
+          iniConfig: Object.assign({}, obj),
+          selectedSection: null,
+          selectedSource: 'fieldextraction.properties.allextractors.web'
+        });
+    });
+
   }
 
   removeSection() {
     const {iniConfig, selectedSection, selectedSource, data } = this.state;
     if(selectedSection && selectedSection !== ".") {
+      const configFile = ini.getSectionConfigFile(iniConfig, selectedSection);
       ini.deleteSection(iniConfig, selectedSection).then((newIniConfig) => {
         if(selectedSource) {
           data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
           data[selectedSource].changed = true;
+          if(configFile) {
+            data[configFile].decoded = null;
+            data[configFile].deleted = true;
+          }
         }
         this.setState({
           iniConfig: Object.assign({}, newIniConfig),
@@ -339,15 +438,19 @@ class FieldExtractionTopConfig extends Component {
     const { data, iniConfig } = this.state;
     /*eslint no-template-curly-in-string: "off"*/
     const path = "${basepath}/vendor/newvendor.properties"
-    ini.addInclude(iniConfig, path, {basepath: 'versions/1.5'}).then((newInclude) => {
+    ini.addInclude(iniConfig, path, {
+      basepath: 'versions/1.5'
+    }).then((newInclude) => {
       data[newInclude.virtualvalue] = {};
       data[newInclude.virtualvalue].decoded = '';
       data[newInclude.virtualvalue].changed = true;
       data[newInclude.virtualvalue].type = 'ini';
-      ini.addInclude(iniConfig, path, { basepath: 'versions/1.5' } );
 
       // Re-render top level config
-      data['fieldextraction.properties.allextractors.web'].decoded = ini.deserialize(iniConfig, {source: 'fieldextraction.properties.allextractors.web'}).data;
+      data['fieldextraction.properties.allextractors.web'].decoded =
+        ini.deserialize(iniConfig, {
+          source: 'fieldextraction.properties.allextractors.web'
+        }).data;
       data['fieldextraction.properties.allextractors.web'].changed = true;
       this.setState({
         data: data,
@@ -380,6 +483,7 @@ class FieldExtractionTopConfig extends Component {
       })
     }
   }
+
   render() {
     const {
       fetchingData,
@@ -388,11 +492,11 @@ class FieldExtractionTopConfig extends Component {
       selectedSection,
       selectedData,
       showCommitModal,
-      data,
-      commitFiles
+      data
     } = this.state;
 
     var configDisplay;
+    // data={ data[selectedSource].decoded }
     if(data) {
       if (selectedSection && selectedSection !== '.' && data[selectedSource]) {
         // const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
@@ -413,7 +517,7 @@ class FieldExtractionTopConfig extends Component {
               </Tab>
               <Tab eventKey="ini" title="Ini">
                 <FieldExtractionConfigEditor
-                  data={ data[selectedSource].decoded }
+                  data={ini.deserialize(iniConfig, {source: selectedSource}).data}
                   onChange={ this.updateData }
                   style={ {flex: 1} }
                   lines={ sourceSelectedLines }
@@ -445,7 +549,7 @@ class FieldExtractionTopConfig extends Component {
         configDisplay =
           <div >
             <FieldExtractionConfigEditor
-              data={ data[selectedSource].decoded }
+              data={ ini.deserialize(iniConfig, {source: selectedSource}).data }
               path={ selectedSource }
               style={ {flex: 1} }/>
           </div>
@@ -460,7 +564,8 @@ class FieldExtractionTopConfig extends Component {
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
               <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
-              <Button size="sm" disabled={!removeEnabled} onClick={() => this.removeSection()}>Remove</Button>
+              <Button size="sm" disabled={!removeEnabled} onClick={() => this.onRemoveClicked()}>Remove</Button>
+              <Button size="sm" variant="dark" onClick={() => this.showCommitModal()}> Commit </Button>
               <FieldExtractionNavigationTree
                 data={iniConfig}
                 selectedSource={selectedSource || '.'}
@@ -471,10 +576,11 @@ class FieldExtractionTopConfig extends Component {
             {configDisplay}
           </SplitPane>
           <FieldExtractionCommitModal
-            files={commitFiles}
+            changedfiles={Object.keys(data).filter((itemKey) => { return data[itemKey].changed })}
+            deletedfiles={Object.keys(data).filter((itemKey) => data[itemKey].deleted)}
             show={showCommitModal}
             onCancel={this.onCloseCommitModal}
-            onSubmit= {this.commitMorphline}/>
+            onSubmit= {this.submitCommit}/>
         </>
       );
     }

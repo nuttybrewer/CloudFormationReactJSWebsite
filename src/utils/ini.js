@@ -3,7 +3,7 @@
 
 const util = require('util');
 
-export default { deserialize, serialize, deleteSection, addSection, addInclude };
+export default { deserialize, serialize, deleteSection, addSection, addInclude, removeInclude, getSectionConfigFile };
 
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
@@ -136,6 +136,12 @@ function addSection(obj, sectionkey, sectionvals, source, lineObj=null, environm
   });
 }
 
+function getSectionConfigFile(obj, sectionkey) {
+  if(obj[sectionkey].type === 'section' && obj[sectionkey].children && obj[sectionkey].children['configFile']) {
+    return obj[sectionkey].children['configFile'].values[0].virtualvalue;
+  }
+}
+
 function findSourceEndLineObject(obj, source) {
   // The last line might not be in the general '.' section,
   // so go looking for any line in that section and dig down from there
@@ -165,6 +171,31 @@ function addInclude(obj, path, environment = {}) {
   });
 }
 
+function removeInclude(obj, path, environment = {}) {
+  return new Promise((resolve) => {
+    if(obj['include'] && Array.isArray(obj['include'].values)) {
+      var includeVal = obj['include'].values.find((item) => item.virtualvalue === path);
+      if(includeVal) {
+        // Hard part, remove all sections and attributes in the tree, which means
+        // we need to traverse the whole tree!
+        Object.keys(obj).forEach((sectionKey) => {
+          if(sectionKey !== '.' && sectionKey !== 'include'){
+            deleteSection(obj, sectionKey, path);
+          }
+        });
+
+        // Remove the include value
+        deleteValue(obj, includeVal);
+        obj['include'].values = obj['include'].values.filter((item) => item.virtualvalue !== path);
+
+        // Remove any comment lines at beginning lines from the '.' section
+        obj['.'].values = obj['.'].values.filter((item) => item.source !== path)
+      }
+    }
+    resolve(obj);
+  })
+}
+
 function insertValue(obj, val, prev) {
   if(val.source === prev.source) {
     val.nextline = prev.nextline;
@@ -179,31 +210,32 @@ function insertValue(obj, val, prev) {
 }
 
 function deleteValue(obj, val) {
-  console.log(`Deleting value ${val.virtualvalue} in source ${val.source} with nextline ${val.nextline} and prevline ${val.prevline}`);
-  if (val.prevline) {
-    val.prevline.nextline = val.nextline;
-  }
-  if(val.nextline) {
-    val.nextline.prevline = val.prevline;
-  }
+    if (val && val.prevline) {
+      val.prevline.nextline = val.nextline;
+    }
+
+    if(val && val.nextline) {
+      val.nextline.prevline = val.prevline;
+    }
 }
 
-function deleteSection(obj, sectionkey) {
+function deleteSection(obj, sectionkey, source = null) {
   const section = obj[sectionkey];
-  console.log(`Deleting section ${sectionkey}`);
+  console.log(`Deleting section ${sectionkey} for source ${source}`);
   return new Promise((resolve) => {
     if (section.values) {
       section.values.forEach((value) => {
-        deleteValue(value);
-        const removeme = section.values.indexOf(value);
-        section.values.splice(removeme, 1);
+        if(value) {
+          if( value.source === source || source === null) {
+            deleteValue(value)
+            section.values.splice(section.values.indexOf(value), 1);
+            value = null;
+          }
+        }
       });
-
-      section.values = null // Re-assign the vals will dereference them???
-    }
-
-    if(section.type) {
-      section.type = null; // Re-assign the vals will dereference them???
+      if (section.values.length === 0) {
+        section.values = null // Re-assign the vals will dereference them???
+      }
     }
 
     // We need to delete the section's valueObjects first to get rid of the serialization
@@ -211,17 +243,37 @@ function deleteSection(obj, sectionkey) {
       Object.keys(section.children).forEach((childkey) => {
         // Remove each line from the file
         if(section.children[childkey].values) {
-          section.children[childkey].values.forEach((valueItem) => deleteValue(obj, valueItem));
-          section.children[childkey] = null;
+          section.children[childkey].values.forEach((valueItem) => {
+            console.log(`Child item source is ${valueItem.source} and source is ${source}`);
+            if(valueItem.source === source || source === null) {
+              deleteValue(obj, valueItem)
+              console.log("Item at " + section.children[childkey].values.indexOf(valueItem));
+              section.children[childkey].values = section.children[childkey].values.filter((item) => item !== valueItem);
+              console.log(util.inspect(section.children[childkey].values));
+              valueItem = null;
+            }
+          })
+
+          if(section.children[childkey].values.length === 0) {
+            console.log(`setting ${childkey} to null`)
+            section.children[childkey] = null;
+            delete section.children[childkey];
+          }
         }
       });
-      section.children = null;
+      if(Object.keys(section.children).length === 0){
+        console.log("Section has no keys, deleting it")
+        section.children = null;
+      }
     }
-    obj[sectionkey] = null;
-    delete obj[sectionkey];
+
+    if (!section.values && !section.children) {
+      section.type = null; // Re-assign the vals will dereference them???
+      obj[sectionkey] = null;
+      delete obj[sectionkey];
+    }
     resolve(obj);
   });
-
 }
 // properties = {
 //   key: {
@@ -566,6 +618,7 @@ function substitute(tree, opt) {
   // Find all the roots
   tree['.'].values.filter((val) => val.prevline === null).forEach((startLine) => {
     var currObject = startLine;
+    currObject.virtualvalue = currObject.value; // Failsafe if there's not variables
     // Virtual vs. Real rendering
     while(currObject) {
       if(typeof currObject.value === 'string') { // Comments won't have values

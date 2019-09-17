@@ -8,36 +8,55 @@ class FieldExtractionCommitModal extends React.Component {
     super(props);
     this.onCommit = this.onCommit.bind(this);
     this.onMessageChange = this.onMessageChange.bind(this);
-    this.onCheckBoxChange = this.onCheckBoxChange.bind(this);
+    this.onChangedCheckBoxChange = this.onChangedCheckBoxChange.bind(this);
+    this.onDeletedCheckBoxChange = this.onDeletedCheckBoxChange.bind(this);
     this.state = {
-      files: [],
+      changedfiles: [],
+      deletedfiles: [],
       message: null
     }
   }
 
   onCommit(e) {
     const { onSubmit } = this.props;
-    const {files, message } = this.state;
-    onSubmit(files, message);
+    const {changedfiles, deletedfiles, message } = this.state;
+    onSubmit(changedfiles, deletedfiles, message);
   }
 
-  onCheckBoxChange(e) {
+  onChangedCheckBoxChange(e) {
     console.log("onCheckBoxChange: " + util.inspect(e.target.id));
-    const { files } = this.state;
-    var newFiles = [];
-    console.log("Files: " + util.inspect(files));
-    if(files.find((file) => file === e.target.id)) {
-      newFiles = files.filter((file) => file !== e.target.id);
-      console.log("newFiles: " + util.inspect(newFiles));
-      if (newFiles) {
-        return this.setState({files: newFiles});
+    const { changedfiles } = this.state;
+    var newChangedFiles = [];
+
+    if(changedfiles.find((file) => file === e.target.id)) {
+      newChangedFiles = changedfiles.filter((file) => file !== e.target.id);
+      if (newChangedFiles) {
+        return this.setState({changedfiles: newChangedFiles});
       }
       return this.setState({
-        files: []
+        changedfiles: []
       })
     }
-    files.push(e.target.id);
-    return this.setState({files: files});
+    changedfiles.push(e.target.id);
+    return this.setState({changedfiles: changedfiles});
+  }
+
+  onDeletedCheckBoxChange(e) {
+    console.log("onDeletedCheckBoxChange: " + util.inspect(e.target.id));
+    const { deletedfiles } = this.state;
+    var newDeletedFiles = [];
+
+    if(deletedfiles.find((file) => file === e.target.id)) {
+      newDeletedFiles = deletedfiles.filter((file) => file !== e.target.id);
+      if (newDeletedFiles) {
+        return this.setState({deletedfiles: newDeletedFiles});
+      }
+      return this.setState({
+        deletedfiles: []
+      })
+    }
+    deletedfiles.push(e.target.id);
+    return this.setState({deletedfiles: deletedfiles});
   }
 
   onMessageChange(e) {
@@ -45,15 +64,25 @@ class FieldExtractionCommitModal extends React.Component {
   }
 
   render() {
-    const { files, onCancel, show } = this.props;
-    const items = files ? files : [];
-    const checkBoxes = items.map((file) =>
+    const { changedfiles, deletedfiles, onCancel, show } = this.props;
+    const changeditems = changedfiles ? changedfiles : [];
+    const deleteditems = deletedfiles ? deletedfiles : [];
+    const changedCheckBoxes = changeditems.map((file) =>
       <Form.Check
         type="checkbox"
         key={file}
         id={file}
         label={file}
-        onChange={this.onCheckBoxChange}
+        onChange={this.onChangedCheckBoxChange}
+      />
+    );
+    const deletedCheckBoxes = deleteditems.map((file) =>
+      <Form.Check
+        type="checkbox"
+        key={file}
+        id={file}
+        label={file}
+        onChange={this.onDeletedCheckBoxChange}
       />
     );
 
@@ -65,7 +94,14 @@ class FieldExtractionCommitModal extends React.Component {
         </Modal.Header>
           <Modal.Body>
               <Form>
-                {checkBoxes}
+                <fieldset className="fieldSet">
+                  <legend className="legend">Changed/Added files</legend>
+                  {changedCheckBoxes}
+                </fieldset>
+                <fieldset className="fieldSet">
+                  <legend className="legend">Deleted Files</legend>
+                  {deletedCheckBoxes}
+                </fieldset>
                 <Form.Group controlId="textArea">
                   <Form.Label>Commit Message</Form.Label>
                   <Form.Control as="textarea" rows="3" onChange={this.onMessageChange}/>
