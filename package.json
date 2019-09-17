@@ -58,7 +58,9 @@
     "@babel/cli": "^7.5.5",
     "@babel/core": "^7.5.5",
     "@babel/preset-env": "^7.5.5",
+    "@types/jest": "^24.0.18",
     "express-generator": "^4.16.1",
-    "http-proxy-middleware": "^0.19.1"
+    "http-proxy-middleware": "^0.19.1",
+    "ts-jest": "^24.0.2"
   }
 }
