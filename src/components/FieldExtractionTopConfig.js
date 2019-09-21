@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Tabs, Tab, Button} from 'react-bootstrap';
+import {Tabs, Tab, Button, ButtonGroup, Dropdown} from 'react-bootstrap';
 import util from 'util';
 import SplitPane from 'react-split-pane';
 import axios from 'axios';
@@ -42,7 +42,6 @@ class FieldExtractionTopConfig extends Component {
       selectedSource: null,
       selectedData: null,
       selectedSection: null,
-      changesPending: false,
       reloadAll: false,
       showCommitModal: false
     }
@@ -159,20 +158,16 @@ class FieldExtractionTopConfig extends Component {
   }
 
   updateData(newcontents, path) {
-    const { data, changesPending } = this.state;
+    const { data } = this.state;
     if(newcontents !== data[path].decoded) {
       data[path].decoded = newcontents;
       data[path].changed = true;
-
-      if (changesPending) {
-        return this.setState({data: data});
-      }
-      this.setState({data: data, changesPending: true});
+      this.setState({data: Object.assign({},data)});
     }
   }
 
   reload() {
-    this.setState({changesPending: false, iniConfig: null, data: {}, fetchingData: false, selectedSource: 'fieldextraction.properties.allextractors.web', selectedSection: '.', reloadAll: true});
+    this.setState({iniConfig: null, data: {}, fetchingData: false, selectedSource: 'fieldextraction.properties.allextractors.web', selectedSection: '.', reloadAll: true});
   }
 
   validateMorphline(path, logs) {
@@ -484,6 +479,33 @@ class FieldExtractionTopConfig extends Component {
     }
   }
 
+  activateSection() {
+    const { selectedSection, selectedSource, data,iniConfig } = this.state;
+    ini.activateSection(iniConfig, selectedSection);
+    data[selectedSource].decoded = ini.deserialize(iniConfig, {source: selectedSource}).data;
+    data[selectedSource].changed = true;
+    this.setState({
+      iniConfig: Object.assign({}, iniConfig),
+      data: Object.assign({}, data)
+    });
+  }
+
+  deactivateSection() {
+    const { selectedSource, selectedSection, data, iniConfig } = this.state;
+    ini.deactivateSection(iniConfig, selectedSection);
+    data[selectedSource].decoded = ini.deserialize(iniConfig, {source: selectedSource}).data;
+    data[selectedSource].changed = true;
+    this.setState({
+      iniConfig: Object.assign({}, iniConfig),
+      data: Object.assign({}, data)
+    });
+  }
+
+
+  // <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
+  // <Button size="sm" disabled={!removeEnabled} onClick={() => this.onRemoveClicked()}>Remove</Button>
+  // <Button size="sm" variant="dark" onClick={() => this.activateSection()}>Activate</Button>
+  // <Button size="sm" variant="dark" onClick={() => this.deactivateSection()}>DeActivate</Button>
   render() {
     const {
       fetchingData,
@@ -559,13 +581,44 @@ class FieldExtractionTopConfig extends Component {
     if (!fetchingData && iniConfig) {
       const addEnabled = selectedSource && !selectedSection
       const removeEnabled = selectedSource !== 'fieldextraction.properties.allextractors.web';
+      const activateEnabled = selectedSection && !ini.isActiveExtractor(iniConfig, selectedSection);
+      const deactivateEnabled = selectedSection && ini.isActiveExtractor(iniConfig, selectedSection);
+      const firstChangedSource = Object.keys(data).find((sourcePath) => data[sourcePath].changed === true);
+      const commitEnabled = (firstChangedSource ? true : false);
       return (
         <>
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
-              <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
-              <Button size="sm" disabled={!removeEnabled} onClick={() => this.onRemoveClicked()}>Remove</Button>
-              <Button size="sm" variant="dark" onClick={() => this.showCommitModal()}> Commit </Button>
+              <ButtonGroup aria-label="buttonGroup1">
+                <Dropdown>
+                  <Dropdown.Toggle variant="dark" id="dropdown-basic" size="sm">
+                    Operations
+                  </Dropdown.Toggle>
+
+                  <Dropdown.Menu>
+                    <Dropdown.Item disabled={!addEnabled}
+                      onClick={() => this.onAddClicked()}>
+                      Add
+                    </Dropdown.Item>
+                    <Dropdown.Item disabled={!removeEnabled}
+                      onClick={() => this.onRemoveClicked()}>
+                      Delete
+                    </Dropdown.Item>
+                    <Dropdown.Item  disabled={!activateEnabled}
+                      onClick={() => this.activateSection()}>
+                      Activate
+                    </Dropdown.Item>
+                    <Dropdown.Item  disabled={!deactivateEnabled}
+                      onClick={() => this.deactivateSection()}>
+                      Deactivate
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+                <Button size="sm" variant="dark" disabled={!commitEnabled}
+                  onClick={() => this.showCommitModal()}>
+                  Commit
+                </Button>
+              </ButtonGroup>
               <FieldExtractionNavigationTree
                 data={iniConfig}
                 selectedSource={selectedSource || '.'}
