@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import {Treebeard, decorators } from 'react-treebeard';
+
 // import util from 'util'
 
 import Header from './TreeItemDecorator';
@@ -22,11 +23,9 @@ class FieldExtractionNavigationTree extends Component {
     this.convertIni();
   }
 
-
   convertIni(){
     const { selectedSource, selectedSection, data } = this.props;
     const vendors = {}
-
     return new Promise((resolve) => {
       // Find all the extractors, their source and their vendor
       if (data) {
@@ -146,7 +145,7 @@ class FieldExtractionNavigationTree extends Component {
       this.setState(() => ({selectedNodeName: node.name, treedata: Object.assign({}, treedata)}));
       onSelect({source: node.source, section: node.extractor_key, item: node.key});
   }
-        //  decorators={{...decorators, Header}}
+
 
   render() {
     const { treedata } = this.state;
