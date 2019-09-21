@@ -28,7 +28,7 @@ export default {
                     position: 'relative',
                     display: 'inline-block',
                     verticalAlign: 'top',
-                    marginLeft: '-5px',
+                    marginLeft: '0px',
                     height: '24px',
                     width: '0px'
                 },
@@ -39,7 +39,7 @@ export default {
                     margin: '-7px 0 0 -7px',
                     height: '14px'
                 },
-                height: 14,
+                height: 0,
                 width: 0,
                 arrow: {
                     fill: 'none',
@@ -75,7 +75,9 @@ export default {
                   float: 'left'
                 },
                 actions: {
-                  float: 'right'
+                  float: 'right',
+                  position: 'relative',
+                  display: 'flex'
                 }
             },
             subtree: {
