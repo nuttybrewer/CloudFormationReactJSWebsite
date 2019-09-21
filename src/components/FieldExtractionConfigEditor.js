@@ -40,11 +40,16 @@ class FieldExtractionConfigEditor extends Component {
     }
   }
 
+  onBlur() {
+    console.log("Editor blurred");
+  }
 
   render() {
     const {  data } = this.props;
       return (
-        <div><ControlledEditor height="100vh" language="ini" value={data} onChange={this.onEditorChange} editorDidMount={this.onEditorDidMount}/></div>
+        <div onBlur={() => this.onBlur()}>
+          <ControlledEditor height="100vh" language="ini" value={data} onChange={this.onEditorChange} editorDidMount={this.onEditorDidMount}/>
+        </div>
       );
   }
 }
