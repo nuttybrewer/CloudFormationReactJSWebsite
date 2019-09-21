@@ -3,7 +3,18 @@
 
 const util = require('util');
 
-export default { deserialize, serialize, deleteSection, addSection, addInclude, removeInclude, getSectionConfigFile };
+export default {
+  deserialize,
+  serialize,
+  deleteSection,
+  addSection,
+  addInclude,
+  removeInclude,
+  getSectionConfigFile,
+  activateSection,
+  deactivateSection,
+  isActiveExtractor
+};
 
 function deserialize(obj, opt) {
   if (typeof opt === 'string') {
@@ -217,6 +228,72 @@ function deleteValue(obj, val) {
     if(val && val.nextline) {
       val.nextline.prevline = val.prevline;
     }
+}
+
+function closerToEnd(val1, val2) {
+  // Make sure the sources are the same, if not, return val1
+  if(val1.source !== val2.source) {
+    return val1;
+  }
+  // if val2 is val1's nextline, then it comes after, then we're done
+  if(val1.nextline === val2) {
+    return val2;
+  }
+  // if val1's nextline is null, then it's the last line in the file
+  if (val1.nextline === null) {
+    return val1;
+  }
+
+  // The two values aren't linked to each other
+  // check val1's next line until we either reach val2, or
+  // we hit the end.
+  const towardsEnd = closerToEnd(val1.nextline, val2);
+  if (towardsEnd === val1.nextline) {
+    return val1;
+  }
+  return val2;
+}
+
+function deactivateSection(obj, section) {
+  if(obj[section] && isActiveExtractor(obj, section)) {
+    const extractor = obj['activeExtractors'].values.find((val) => val.virtualvalue === section)
+    deleteValue(obj, extractor);
+    obj['activeExtractors'].values = obj['activeExtractors'].values.filter((val) => val.virtualvalue !== section);
+  }
+}
+
+function isActiveExtractor(obj, section) {
+  var isActiveObject;
+  if(obj[section] && obj['activeExtractors'] && obj['activeExtractors'].values){
+    isActiveObject =
+     obj['activeExtractors'].values.find((activeExtractor) => activeExtractor.virtualvalue === section);
+  }
+  return isActiveObject ? true : false;
+}
+
+function activateSection(obj, section) {
+  // Find the last line of a section
+  if(obj[section] && obj[section].children && !isActiveExtractor(obj, section)) {
+    var lastValue;
+    Object.keys(obj[section].children).forEach((childkey) => {
+      if(lastValue) {
+        lastValue = closerToEnd(lastValue, obj[section].children[childkey].values[0])
+      }
+      else {
+        lastValue = obj[section].children[childkey].values[0];
+      }
+    })
+    const newVal = {};
+    newVal.content = "activeExtractors = ";
+    newVal.value = section;
+    newVal.virtualvalue = section;
+    newVal.prevline = null;
+    newVal.nextline = null;
+    newVal.literal = false;
+    newVal.source = lastValue.source;
+    insertValue(obj, newVal, lastValue);
+    obj['activeExtractors'].values.push(newVal);
+  }
 }
 
 function deleteSection(obj, sectionkey, source = null) {
