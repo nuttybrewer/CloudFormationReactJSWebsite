@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import ControlledEditor from '@monaco-editor/react';
 import { Selection, Position } from 'monaco-editor';
-import util from 'util';
+// import util from 'util';
 
 class FieldExtractionConfigEditor extends Component {
   constructor(props) {

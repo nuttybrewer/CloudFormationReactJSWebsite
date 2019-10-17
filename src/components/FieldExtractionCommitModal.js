@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { FaGithub } from 'react-icons/fa';
-import util from 'util';
+// import util from 'util';
 class FieldExtractionCommitModal extends React.Component {
 
   constructor(props) {
@@ -24,7 +24,6 @@ class FieldExtractionCommitModal extends React.Component {
   }
 
   onChangedCheckBoxChange(e) {
-    console.log("onCheckBoxChange: " + util.inspect(e.target.id));
     const { changedfiles } = this.state;
     var newChangedFiles = [];
 
@@ -42,7 +41,6 @@ class FieldExtractionCommitModal extends React.Component {
   }
 
   onDeletedCheckBoxChange(e) {
-    console.log("onDeletedCheckBoxChange: " + util.inspect(e.target.id));
     const { deletedfiles } = this.state;
     var newDeletedFiles = [];
 

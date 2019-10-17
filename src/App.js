@@ -58,7 +58,6 @@ class App extends Component{
     if (cookieToken){
       const token = jsonwebtoken.decode(cookieToken, {complete:true});
       if (token && token.payload && token.payload.exp > Math.floor(Date.now()/1000)) {
-        console.log("Retrieving the sessiontoken from cookies");
         state.sessiontoken = cookieToken;
       }
       else {

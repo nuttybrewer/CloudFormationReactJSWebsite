@@ -11,6 +11,7 @@ import FieldExtractionConfigEditor from './FieldExtractionConfigEditor';
 import FieldExtractionNavigationTree from './FieldExtractionNavigationTree';
 import FieldExtractionExtractorConfigForm from './FieldExtractionExtractorConfigForm';
 import FieldExtractionCommitModal from './FieldExtractionCommitModal';
+import FieldExtractionNewVendorModal from './FieldExtractionNewVendorModal';
 import FieldExtractionTestPanel from './FieldExtractionTestPanel';
 
 import LoadingSpinner from './LoadingSpinner';
@@ -35,6 +36,8 @@ class FieldExtractionTopConfig extends Component {
     this.onCloseCommitModal = this.onCloseCommitModal.bind(this);
     this.showCommitModal = this.showCommitModal.bind(this);
     this.removeSection = this.removeSection.bind(this);
+    this.addVendor = this.addVendor.bind(this);
+
     this.state = {
       data: {},
       iniConfig: null,
@@ -43,7 +46,8 @@ class FieldExtractionTopConfig extends Component {
       selectedData: null,
       selectedSection: null,
       reloadAll: false,
-      showCommitModal: false
+      showCommitModal: false,
+      showVendor: false
     }
   }
 
@@ -423,37 +427,43 @@ class FieldExtractionTopConfig extends Component {
   onAddClicked() {
     const { selectedSource } = this.state;
     if(selectedSource === 'fieldextraction.properties.allextractors.web') {
-      return this.addVendor();
+      return this.addVendorClicked();
     }
     return this.addSection();
   }
 
-  addVendor() {
-    // Add include to the data structure first
-    const { data, iniConfig } = this.state;
-    /*eslint no-template-curly-in-string: "off"*/
-    const path = "${basepath}/vendor/newvendor.properties"
-    ini.addInclude(iniConfig, path, {
-      basepath: 'versions/1.5'
-    }).then((newInclude) => {
-      data[newInclude.virtualvalue] = {};
-      data[newInclude.virtualvalue].decoded = '';
-      data[newInclude.virtualvalue].changed = true;
-      data[newInclude.virtualvalue].type = 'ini';
+  addVendorClicked() {
+    this.setState({showVendor: true})
+  }
 
-      // Re-render top level config
-      data['fieldextraction.properties.allextractors.web'].decoded =
-        ini.deserialize(iniConfig, {
-          source: 'fieldextraction.properties.allextractors.web'
-        }).data;
-      data['fieldextraction.properties.allextractors.web'].changed = true;
-      this.setState({
-        data: data,
-        iniConfig: Object.assign({}, iniConfig),
-        selectedSource: newInclude.virtualvalue
-      })
-    });
+  addVendor(vendor) {
+    if(vendor) {
+      // Add include to the data structure first
+      const { data, iniConfig } = this.state;
+      /*eslint no-template-curly-in-string: "off"*/
+      const path = "${basepath}/vendor/" + vendor + ".properties"
+      ini.addInclude(iniConfig, path, {
+        basepath: 'versions/1.5'
+      }).then((newInclude) => {
+        data[newInclude.virtualvalue] = {};
+        data[newInclude.virtualvalue].decoded = '';
+        data[newInclude.virtualvalue].changed = true;
+        data[newInclude.virtualvalue].type = 'ini';
 
+        // Re-render top level config
+        data['fieldextraction.properties.allextractors.web'].decoded =
+          ini.deserialize(iniConfig, {
+            source: 'fieldextraction.properties.allextractors.web'
+          }).data;
+        data['fieldextraction.properties.allextractors.web'].changed = true;
+        this.setState({
+          data: data,
+          iniConfig: Object.assign({}, iniConfig),
+          selectedSource: newInclude.virtualvalue
+        })
+      });
+    }
+    this.setState({ showVendor: false })
   }
 
   addSection() {
@@ -501,7 +511,7 @@ class FieldExtractionTopConfig extends Component {
     });
   }
 
-
+  // <FieldExtractionNewVendorModal show={ showVendor } onClose={this.addVendor}/>
   // <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
   // <Button size="sm" disabled={!removeEnabled} onClick={() => this.onRemoveClicked()}>Remove</Button>
   // <Button size="sm" variant="dark" onClick={() => this.activateSection()}>Activate</Button>
@@ -514,14 +524,14 @@ class FieldExtractionTopConfig extends Component {
       selectedSection,
       selectedData,
       showCommitModal,
-      data
+      data,
+      showVendor
     } = this.state;
 
     var configDisplay;
     // data={ data[selectedSource].decoded }
     if(data) {
       if (selectedSection && selectedSection !== '.' && data[selectedSource]) {
-        // const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection}).ranges[selectedSource];
         const sourceSelectedLines = ini.deserialize(iniConfig, {section: selectedSection, source: selectedSource}).ranges[selectedSource];
         if(iniConfig[selectedSection].children && iniConfig[selectedSection].children.configFile){
           configDisplay =
@@ -634,6 +644,7 @@ class FieldExtractionTopConfig extends Component {
             show={showCommitModal}
             onCancel={this.onCloseCommitModal}
             onSubmit= {this.submitCommit}/>
+          <FieldExtractionNewVendorModal show={ showVendor } onClose={this.addVendor}/>
         </>
       );
     }

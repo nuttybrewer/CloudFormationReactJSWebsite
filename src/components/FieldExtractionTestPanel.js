@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Form, InputGroup, Button} from 'react-bootstrap';
 import ReactJson from 'react-json-view';
-import util from 'util';
+// import util from 'util';
 
 import './FieldExtractionTestPanel.css';
 
@@ -96,7 +96,7 @@ class FieldExtractionTestPanel extends Component {
     const { path } = this.props;
     const { results, logs, cachedLogs, disableTest } = this.state;
     var jsonResults;
-    
+
     if(results) {
       if(results.extracted) {
         jsonResults =
@@ -112,7 +112,6 @@ class FieldExtractionTestPanel extends Component {
           </fieldset>
       }
       else {
-        console.log("API Response: ", util.inspect(results));
         jsonResults =
           <fieldset className="jsonResults">
             <legend className="errorLabel">Error</legend>
