@@ -38,7 +38,9 @@ class FieldExtractionNewVendorModal extends React.Component {
               </div>
           </Modal.Body>
         <Modal.Footer>
-          <Button variant="dark" secondary onClick={this.onCancel}>Cancel <FaWindowClose/></Button>
+          <Button variant="dark" onClick={this.onCancel}>
+            Cancel <FaWindowClose/>
+          </Button>
           <Button variant="dark" onClick={this.onClose}>
             Create <FaFileCode/>
           </Button>

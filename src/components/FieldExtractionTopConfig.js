@@ -12,6 +12,7 @@ import FieldExtractionNavigationTree from './FieldExtractionNavigationTree';
 import FieldExtractionExtractorConfigForm from './FieldExtractionExtractorConfigForm';
 import FieldExtractionCommitModal from './FieldExtractionCommitModal';
 import FieldExtractionNewVendorModal from './FieldExtractionNewVendorModal';
+import FieldExtractionNewSectionModal from './FieldExtractionNewSectionModal';
 import FieldExtractionTestPanel from './FieldExtractionTestPanel';
 
 import LoadingSpinner from './LoadingSpinner';
@@ -22,6 +23,8 @@ import LoadingSpinner from './LoadingSpinner';
 //   sha: <sha value pulled from Github blob>
 //   changed: <true | false></true> if there's been a local change
 // }
+
+
 class FieldExtractionTopConfig extends Component {
   constructor(props) {
     super(props);
@@ -35,8 +38,11 @@ class FieldExtractionTopConfig extends Component {
     this.submitCommit = this.submitCommit.bind(this);
     this.onCloseCommitModal = this.onCloseCommitModal.bind(this);
     this.showCommitModal = this.showCommitModal.bind(this);
+    this.onAddVendorClicked = this.onAddVendorClicked.bind(this);
+    this.onAddSectionClicked = this.onAddSectionClicked.bind(this);
     this.removeSection = this.removeSection.bind(this);
     this.addVendor = this.addVendor.bind(this);
+    this.addSection = this.addSection.bind(this);
 
     this.state = {
       data: {},
@@ -47,7 +53,8 @@ class FieldExtractionTopConfig extends Component {
       selectedSection: null,
       reloadAll: false,
       showCommitModal: false,
-      showVendor: false
+      showAddVendor: false,
+      showAddSection: false
     }
   }
 
@@ -427,13 +434,16 @@ class FieldExtractionTopConfig extends Component {
   onAddClicked() {
     const { selectedSource } = this.state;
     if(selectedSource === 'fieldextraction.properties.allextractors.web') {
-      return this.addVendorClicked();
+      return this.onAddVendorClicked();
     }
-    return this.addSection();
+    if (selectedSource) {
+      return this.onAddSectionClicked();
+    }
+    // This shouldn't happen since we're checking for it in the rendering below
   }
 
-  addVendorClicked() {
-    this.setState({showVendor: true})
+  onAddVendorClicked() {
+    this.setState({showAddVendor: true})
   }
 
   addVendor(vendor) {
@@ -463,29 +473,80 @@ class FieldExtractionTopConfig extends Component {
         })
       });
     }
-    this.setState({ showVendor: false })
+    this.setState({ showAddVendor: false })
   }
 
-  addSection() {
-    const {iniConfig, selectedSource, data} = this.state;
-    const sectionKey = 'bash_foobar';
-    const sectionvals = {
-      type: 'grok',
-      name: 'patnewsection',
-      version: 1,
-      grokPattern: '^%{FOO:[^,]},%{BAR:[\\w+]}'
-    }
-    if(selectedSource) {
-      ini.addSection(iniConfig, sectionKey, sectionvals, selectedSource).then((newIniConfig) => {
-        data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
-        data[selectedSource].changed = true;
-        this.setState({
-          iniConfig: Object.assign({}, newIniConfig),
-          selectedSource: selectedSource,
-          selectedSection: sectionKey,
-          data: Object.assign({}, data)
-        });
-      })
+  onAddSectionClicked() {
+    this.setState({ showAddSection: true });
+  }
+
+  addSection(section) {
+    this.setState({ showAddSection: false });
+    if (section && section.name && section.type) {
+      const {iniConfig, selectedSource, data} = this.state;
+      const sectionKey = section.name.toLowerCase();
+      const sectionvals = {
+        name: section.name.toUpperCase(),
+        version: 1,
+      }
+      if(selectedSource) {
+        const vendor = selectedSource.match(/.*\/(.*)\.properties$/)[1]
+        var filename;
+        if(section.type === 'Morphline') {
+
+          // We need this to add a shell morphline file to our data array
+          // Hard code this until we objectify the iniConfig so that the basepath
+          // isn't mangled
+
+          const path = iniConfig['morphlinepath'].values[0].virtualvalue;
+          //const path = "versions/1.5/vendors";
+          console.log(`Adding ${section.name.toLowerCase()} to ${path}`);
+          if(!path) {
+            return;
+          }
+          filename = path + "/" + section.name.toLowerCase() + ".morphlines";
+          data[filename] = {};
+          data[filename].type = "morphline";
+          data[filename].decoded =
+            'morphlines : [ \n' +
+            '  {\n' +
+            `    id : ${section.name.toLowerCase()}\n` +
+            '    importCommands : ["org.kitesdk.**"]\n' +
+            '    commands : [\n' +
+            '      ## Add the Headers to set vendor and subtype\n' +
+            '      {\n' +
+            '        setValues {' +
+            `          HEADER_vendor: "${vendor}"\n` +
+            '          HEADER_devicetype: "SOME TYPE HERE"\n' +
+            '          HEADER_devicemodel: "SOME MODEL HERE"\n' +
+            '        }\n' +
+            '      }\n' +
+            '    ]\n' +
+            '  }\n' +
+            ']';
+          data[filename].changed = true;
+          sectionvals.type = 'morphlines';
+          sectionvals.configFile = "${morphlinepath}/" + section.name.toLowerCase() + ".morphlines"
+        }
+        else if(section.type === 'Grok') {
+          sectionvals.type = 'grok';
+          sectionvals.grokPattern = section.grokPattern;
+        }
+        else {
+          return;
+        }
+        ini.addSection(iniConfig, sectionKey, sectionvals, selectedSource).then((newIniConfig) => {
+          data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
+          data[selectedSource].changed = true;
+          this.setState({
+            iniConfig: Object.assign({}, newIniConfig),
+            selectedSource: selectedSource,
+            selectedSection: sectionKey,
+            selectedData: filename,
+            data: Object.assign({}, data)
+          });
+        })
+      }
     }
   }
 
@@ -525,7 +586,8 @@ class FieldExtractionTopConfig extends Component {
       selectedData,
       showCommitModal,
       data,
-      showVendor
+      showAddVendor,
+      showAddSection
     } = this.state;
 
     var configDisplay;
@@ -644,7 +706,8 @@ class FieldExtractionTopConfig extends Component {
             show={showCommitModal}
             onCancel={this.onCloseCommitModal}
             onSubmit= {this.submitCommit}/>
-          <FieldExtractionNewVendorModal show={ showVendor } onClose={this.addVendor}/>
+          <FieldExtractionNewVendorModal show={ showAddVendor } onClose={this.addVendor}/>
+          <FieldExtractionNewSectionModal show={ showAddSection } onClose={this.addSection}/>
         </>
       );
     }

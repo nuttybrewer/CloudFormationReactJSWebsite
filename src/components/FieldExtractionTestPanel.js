@@ -133,7 +133,7 @@ class FieldExtractionTestPanel extends Component {
             <InputGroup.Prepend>
             <InputGroup.Text id="extractorFileName" >File: </InputGroup.Text>
             </InputGroup.Prepend>
-            <Form.Control type="text" readOnly placeholder="Extractor name..." aria-label="File:" aria-describedby="extractorFileName" autoComplete="off" value={path}/>
+            <Form.Control type="text" readOnly placeholder="Extractor name..." aria-label="File:" aria-describedby="extractorFileName" autoComplete="off" value={path ? path : ""}/>
           </InputGroup>
           <Button onClick={this.testApi} variant="dark" size="sm" disabled={ disableTest }>Test</Button>
         </Form>

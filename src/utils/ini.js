@@ -140,9 +140,9 @@ function addSection(obj, sectionkey, sectionvals, source, lineObj=null, environm
         val.source = source;
         obj[sectionkey].children[sectionvalkey] = {type: 'attributes', values: [val]};
         insertValue(obj, val, prevLine);
+        substituteValue(obj, val, { environment: environment}) // This needs to be generalized
         prevLine = val;
     });
-    substitute(obj, { environment: environment}) // This needs to be generalized
     resolve(obj);
   });
 }
@@ -689,6 +689,50 @@ function mergeOuts(outs, out) {
       return resolve(out);
     });
   });
+}
+
+function substituteValue(tree, valueObj, opt) {
+  console.log(valueObj.value)
+
+  // We can only substitute strings
+  if(typeof valueObj.value === 'string') {
+    const substitutionRegex = /\${([^}]*)/gm;
+    let varMatchGroups;
+    let virtualValue = valueObj.value.repeat(1); // Copy our string over
+    while ((varMatchGroups =  substitutionRegex.exec(virtualValue)) !== null) {
+      // This is necessary to avoid infinite loops with zero-width matches
+      if (varMatchGroups.index === substitutionRegex.lastIndex) {
+          substitutionRegex.lastIndex++;
+      }
+
+      const subKey = varMatchGroups[1];
+      var replaceValue;
+      if (opt.environment[subKey]) {
+        replaceValue = opt.environment[subKey]
+      }
+      else {
+        const subValue = tree[subKey];
+
+        if (subValue) {
+          replaceValue =  subValue.values.map( (obj) => {
+            if(Array.isArray(obj.virtualvalue)){
+              return obj.virtualvalue.join(',')
+            }
+            return obj.virtualvalue
+          }).join(',');
+        }
+      }
+      if (replaceValue) {
+        const term = '${' + subKey + '}'
+        virtualValue = virtualValue.replace(term, replaceValue);
+        valueObj.virtualvalue = virtualValue;
+      }
+    }
+
+    if(!valueObj.virtualvalue) {
+      valueObj.virtualvalue = valueObj.value;
+    }
+  }
 }
 
 function substitute(tree, opt) {
