@@ -197,6 +197,7 @@ class FieldExtractionTopConfig extends Component {
   submitCommit(changedfiles = null, deletedfiles = null, message = null) {
     this.setState({showCommitModal: false});
     const { data } = this.state;
+    console.log("Submit Commit clicked")
     return new Promise((resolve, reject) => {
       this.commitContents(changedfiles, message)
         .then(() => {
@@ -230,17 +231,19 @@ class FieldExtractionTopConfig extends Component {
     }
     return new Promise((resolve, reject) => {
       const path = files.pop();
+      console.log(`Deleting path ${JSON.stringify(path)} with data ${JSON.stringify(data[path])}`);
       client.repos.getContents({
         owner:owner,
         repo: reponame,
         path: path
       }).then((file) => {
+          console.log(`Retrieved file to delete as ${file}`);
           client.repos.deleteFile({
             owner: owner,
             repo: reponame,
             path: path,
             branch: branch,
-            sha: data[path].sha,
+            sha: file.data.sha,
             message: message,
             committer: { name: 'BobSquarePants', email: 'scooby@do.tv'}
           }).then(() => {
@@ -249,6 +252,14 @@ class FieldExtractionTopConfig extends Component {
             }
             resolve();
           })
+          .catch((err) => {
+            console.log(`deleteFile failed ${err.message}`);
+            reject(err)
+          })
+      })
+      .catch((err) => {
+        console.log(`getContents failed ${err.message}`);
+        reject(err)
       })
     });
   }
@@ -259,6 +270,7 @@ class FieldExtractionTopConfig extends Component {
     const { data } = this.state;
 
     const filesToCommit = [];
+    console.log(`Files to save ${JSON.stringify(files)}`);
     if (! files || files.length === 0) {
       return new Promise((resolve) => resolve());
     }
@@ -282,6 +294,10 @@ class FieldExtractionTopConfig extends Component {
                   mode: '100644',
                   type: 'blob'
                 });
+              })
+              .catch((err) => {
+                console.log(`createBlob failed ${err.message}`);
+                reject(err);
               })
             })
           ).then( () =>
@@ -310,12 +326,27 @@ class FieldExtractionTopConfig extends Component {
                   this.setState({data: data});
                   resolve();
                 })
+                .catch((err) => {
+                  console.log(`updateRef failed ${err.message}`);
+                  reject(err);
+                })
               )
+              .catch((err) => {
+                console.log(`createCommit failed ${err.message}`);
+                reject(err);
+              })
             )
+            .catch((err) => {
+              console.log(`createTree failed ${err.message}`);
+              reject(err);
+            })
           )
+          .catch((err) => {
+            reject(err);
+          })
       })
       .catch((error) => {
-        console.log(`Commit failed ${error.message}`);
+        console.log(`getRef failed ${error.message}`);
         reject(error)
       })
     })
@@ -658,7 +689,7 @@ class FieldExtractionTopConfig extends Component {
       const firstChangedSource = Object.keys(data).find((sourcePath) => data[sourcePath].changed === true);
       const commitEnabled = (firstChangedSource ? true : false);
       return (
-        <>
+        <div key="topConfig">
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
               <ButtonGroup aria-label="buttonGroup1">
@@ -708,7 +739,7 @@ class FieldExtractionTopConfig extends Component {
             onSubmit= {this.submitCommit}/>
           <FieldExtractionNewVendorModal show={ showAddVendor } onClose={this.addVendor}/>
           <FieldExtractionNewSectionModal show={ showAddSection } onClose={this.addSection}/>
-        </>
+        </div>
       );
     }
     return (

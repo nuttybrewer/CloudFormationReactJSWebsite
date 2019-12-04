@@ -21,6 +21,9 @@ class FieldExtractionCommitModal extends React.Component {
     const { onSubmit } = this.props;
     const {changedfiles, deletedfiles, message } = this.state;
     onSubmit(changedfiles, deletedfiles, message);
+
+    // Clear selections
+    this.setState({ changedfiles: [], deletefiles: [], message: []})
   }
 
   onChangedCheckBoxChange(e) {
@@ -86,7 +89,7 @@ class FieldExtractionCommitModal extends React.Component {
 
 
     return (
-      <Modal show={show} >
+      <Modal show={show} key="commitModal">
         <Modal.Header >
           <Modal.Title><FaGithub/> Confirm commit to Github</Modal.Title>
         </Modal.Header>

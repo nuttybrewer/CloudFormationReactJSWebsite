@@ -57,6 +57,7 @@ class App extends Component{
     const cookieToken = cookies.get("sessiontoken");
     if (cookieToken){
       const token = jsonwebtoken.decode(cookieToken, {complete:true});
+      console.log(`Cookie token ${JSON.stringify(token)}`);
       if (token && token.payload && token.payload.exp > Math.floor(Date.now()/1000)) {
         state.sessiontoken = cookieToken;
       }
@@ -84,8 +85,10 @@ class App extends Component{
     window.sessionStorage.removeItem('githubtoken');
     this.setState({githubtoken: null});
   }
+
   signOut() {
     const { cookies } = this.props;
+    console.log("Removing sessiontoken cookie");
     cookies.remove("sessiontoken");
     window.sessionStorage.clear();
     this.setState({githubtoken: null, sessiontoken: null})
@@ -111,7 +114,6 @@ class App extends Component{
                     <Nav className="mr-auto" defaultActiveKey="/github">
                       <Nav.Link href="/" eventKey="/">Home</Nav.Link>
                       <Nav.Link as={Link} to="/github" eventKey="/github">Field Extraction Editor</Nav.Link>
-                      <Nav.Link as={Link} to="/test" eventKey="/test">Test</Nav.Link>
                     </Nav>
                   </Navbar.Collapse>
                   <Button type="submit" variant="secondary" size="sm" onClick={this.signOut}>Sign Out <FaSignOutAlt/></Button>
