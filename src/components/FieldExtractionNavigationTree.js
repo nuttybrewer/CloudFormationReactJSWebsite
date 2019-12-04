@@ -139,7 +139,7 @@ class FieldExtractionNavigationTree extends Component {
       }
 
       node.active = true;
-      if (node.children) {
+      if (node.children && node.name !== 'vendors' && node.name === selectedNodeName) {
           node.toggled = toggled;
       }
       this.setState(() => ({selectedNodeName: node.name, treedata: Object.assign({}, treedata)}));
