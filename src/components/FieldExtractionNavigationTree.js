@@ -117,7 +117,7 @@ class FieldExtractionNavigationTree extends Component {
   componentDidUpdate(prevProps) {
     const { data } = this.props;
     if( data !== prevProps.data) {
-      console.log("Refreshing tree");
+      // console.log("Refreshing tree");
       this.convertIni();
     }
   }

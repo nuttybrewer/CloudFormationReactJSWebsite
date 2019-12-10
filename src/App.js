@@ -43,7 +43,7 @@ class App extends Component{
         // This piece is for the mock up server that runs HTTP only.
         // COULD HAVE ILL-EFFECT if you don't deploy this site in https
         var secure = true
-        console.log(parsed_href.protocol);
+        // console.log(parsed_href.protocol);
         if(parsed_href.protocol === 'http:') {
           console.log("http detected")
           secure = false;
@@ -57,12 +57,12 @@ class App extends Component{
     const cookieToken = cookies.get("sessiontoken");
     if (cookieToken){
       const token = jsonwebtoken.decode(cookieToken, {complete:true});
-      console.log(`Cookie token ${JSON.stringify(token)}`);
+      // console.log(`Cookie token ${JSON.stringify(token)}`);
       if (token && token.payload && token.payload.exp > Math.floor(Date.now()/1000)) {
         state.sessiontoken = cookieToken;
       }
       else {
-        console.log("Session token expired, removing sessiontoken");
+        // console.log("Session token expired, removing sessiontoken");
         cookies.remove("sessiontoken");
       }
     }
@@ -88,7 +88,7 @@ class App extends Component{
 
   signOut() {
     const { cookies } = this.props;
-    console.log("Removing sessiontoken cookie");
+    // console.log("Removing sessiontoken cookie");
     cookies.remove("sessiontoken");
     window.sessionStorage.clear();
     this.setState({githubtoken: null, sessiontoken: null})

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import {Tabs, Tab, Button, ButtonGroup, Dropdown} from 'react-bootstrap';
-import util from 'util';
+// import util from 'util';
 import SplitPane from 'react-split-pane';
 import axios from 'axios';
 
@@ -197,7 +197,7 @@ class FieldExtractionTopConfig extends Component {
   submitCommit(changedfiles = null, deletedfiles = null, message = null) {
     this.setState({showCommitModal: false});
     const { data } = this.state;
-    console.log("Submit Commit clicked")
+    // console.log("Submit Commit clicked")
     return new Promise((resolve, reject) => {
       this.commitContents(changedfiles, message)
         .then(() => {
@@ -224,20 +224,20 @@ class FieldExtractionTopConfig extends Component {
 
   deleteContents(files, message) {
     const { client, reponame, owner, branch } = this.props;
-    const { data } = this.state;
+    // const { data } = this.state;
 
     if (! files || files.length === 0) {
       return new Promise((resolve) => resolve());
     }
     return new Promise((resolve, reject) => {
       const path = files.pop();
-      console.log(`Deleting path ${JSON.stringify(path)} with data ${JSON.stringify(data[path])}`);
+      // console.log(`Deleting path ${JSON.stringify(path)} with data ${JSON.stringify(data[path])}`);
       client.repos.getContents({
         owner:owner,
         repo: reponame,
         path: path
       }).then((file) => {
-          console.log(`Retrieved file to delete as ${file}`);
+          // console.log(`Retrieved file to delete as ${file}`);
           client.repos.deleteFile({
             owner: owner,
             repo: reponame,
@@ -270,7 +270,7 @@ class FieldExtractionTopConfig extends Component {
     const { data } = this.state;
 
     const filesToCommit = [];
-    console.log(`Files to save ${JSON.stringify(files)}`);
+    // console.log(`Files to save ${JSON.stringify(files)}`);
     if (! files || files.length === 0) {
       return new Promise((resolve) => resolve());
     }
@@ -353,7 +353,7 @@ class FieldExtractionTopConfig extends Component {
   }
 
   onEditorChange(newData, e) {
-    console.log("Editor save new data: " + util.inspect(newData));
+    // console.log("Editor save new data: " + util.inspect(newData));
   }
 
   onNavigatorSelect(selected) {
@@ -530,8 +530,8 @@ class FieldExtractionTopConfig extends Component {
           // isn't mangled
 
           const path = iniConfig['morphlinepath'].values[0].virtualvalue;
-          //const path = "versions/1.5/vendors";
-          console.log(`Adding ${section.name.toLowerCase()} to ${path}`);
+
+          // console.log(`Adding ${section.name.toLowerCase()} to ${path}`);
           if(!path) {
             return;
           }
@@ -546,7 +546,7 @@ class FieldExtractionTopConfig extends Component {
             '    commands : [\n' +
             '      ## Add the Headers to set vendor and subtype\n' +
             '      {\n' +
-            '        setValues {' +
+            '        setValues {\n' +
             `          HEADER_vendor: "${vendor}"\n` +
             '          HEADER_devicetype: "SOME TYPE HERE"\n' +
             '          HEADER_devicemodel: "SOME MODEL HERE"\n' +
@@ -689,7 +689,7 @@ class FieldExtractionTopConfig extends Component {
       const firstChangedSource = Object.keys(data).find((sourcePath) => data[sourcePath].changed === true);
       const commitEnabled = (firstChangedSource ? true : false);
       return (
-        <div key="topConfig">
+        <div>
           <SplitPane defaultSize="20%" split="vertical">
             <div className="extractorNavPanel">
               <ButtonGroup aria-label="buttonGroup1">

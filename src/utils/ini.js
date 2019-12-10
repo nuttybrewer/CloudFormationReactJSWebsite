@@ -1,7 +1,7 @@
 // Modified version of ini by Isaac Z. Schlueter and Contributors
 // https://github.com/npm/ini
 
-const util = require('util');
+// const util = require('util');
 
 export default {
   deserialize,
@@ -133,7 +133,7 @@ function addSection(obj, sectionkey, sectionvals, source, lineObj=null, environm
     obj[sectionkey].children = {};
     Object.keys(sectionvals).forEach((sectionvalkey) => {
         const val = {};
-        val.content = sectionkey + "." + sectionvalkey + " = "; // Assume it's not an array?
+        val.content = sectionkey + "." + sectionvalkey + "="; // Assume it's not an array?
         const lit = literalize(sectionvals[sectionvalkey])
         val.value = lit.value;
         val.literal = lit.literal;
@@ -170,7 +170,7 @@ function addInclude(obj, path, environment = {}) {
       const prevInclude = obj['include'].values[obj['include'].values.length - 1];
       const newInclude = {}
       newInclude.value = path;
-      newInclude.content = "include = ";
+      newInclude.content = "include=";
       newInclude.source = 'fieldextraction.properties.allextractors.web'
       insertValue(obj, newInclude, prevInclude);
       substitute(obj, { environment: environment })
@@ -298,7 +298,7 @@ function activateSection(obj, section) {
 
 function deleteSection(obj, sectionkey, source = null) {
   const section = obj[sectionkey];
-  console.log(`Deleting section ${sectionkey} for source ${source}`);
+  // console.log(`Deleting section ${sectionkey} for source ${source}`);
   return new Promise((resolve) => {
     if (section.values) {
       section.values.forEach((value) => {
@@ -321,25 +321,25 @@ function deleteSection(obj, sectionkey, source = null) {
         // Remove each line from the file
         if(section.children[childkey].values) {
           section.children[childkey].values.forEach((valueItem) => {
-            console.log(`Child item source is ${valueItem.source} and source is ${source}`);
+            // console.log(`Child item source is ${valueItem.source} and source is ${source}`);
             if(valueItem.source === source || source === null) {
               deleteValue(obj, valueItem)
-              console.log("Item at " + section.children[childkey].values.indexOf(valueItem));
+              // console.log("Item at " + section.children[childkey].values.indexOf(valueItem));
               section.children[childkey].values = section.children[childkey].values.filter((item) => item !== valueItem);
-              console.log(util.inspect(section.children[childkey].values));
+              // console.log(util.inspect(section.children[childkey].values));
               valueItem = null;
             }
           })
 
           if(section.children[childkey].values.length === 0) {
-            console.log(`setting ${childkey} to null`)
+            // console.log(`setting ${childkey} to null`)
             section.children[childkey] = null;
             delete section.children[childkey];
           }
         }
       });
       if(Object.keys(section.children).length === 0){
-        console.log("Section has no keys, deleting it")
+        // console.log("Section has no keys, deleting it")
         section.children = null;
       }
     }
@@ -692,7 +692,7 @@ function mergeOuts(outs, out) {
 }
 
 function substituteValue(tree, valueObj, opt) {
-  console.log(valueObj.value)
+  // console.log(valueObj.value)
 
   // We can only substitute strings
   if(typeof valueObj.value === 'string') {
