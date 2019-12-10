@@ -34,3 +34,8 @@
   margin-bottom: unset;
   color: red;
 }
+
+.react-json-view {
+  width: 600px;
+  overflow: scroll;
+}
