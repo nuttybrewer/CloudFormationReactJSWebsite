@@ -184,7 +184,7 @@ class FieldExtractionPanel extends Component {
               </Navbar>
               </div>
               <div className="FEMainPanel">
-                <FieldExtractionTopConfig client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} enableCommit={this.enableCommit}/>
+                <FieldExtractionTopConfig key="topConfig" client={client} reponame={fieldExtractionRepo} owner={owner} branch={repoBranch} libVersion={libVersion} onGithubError={this.onGithubError} enableCommit={this.enableCommit}/>
               </div>
               <FieldExtractionGithubModal token={githubtoken} onClose={this.hideGithubTokenModal} show={showtoken}/>
             </div>
