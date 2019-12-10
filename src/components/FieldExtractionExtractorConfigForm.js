@@ -5,6 +5,7 @@ import { ControlledEditor } from '@monaco-editor/react';
 
 import FieldExtractionConfigEditor from './FieldExtractionConfigEditor'
 
+var debug = false;
 
 class FieldExtractionExtractorConfigForm extends React.Component {
   constructor(props) {
@@ -106,7 +107,7 @@ class FieldExtractionExtractorConfigForm extends React.Component {
 
       <Form inline autoComplete="off" className="morphlineMenuBarForm">
         {typeFormGroup}
-        <Button size="sm" variant="dark" disabled={!changed} onClick={this.onShowCommitModal}>Commit</Button>
+        { debug ? (<Button size="sm" variant="dark" disabled={!changed} onClick={this.onShowCommitModal}>Commit</Button>) : ""}
       </Form>
       </div>
       { editor }
