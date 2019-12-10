@@ -108,8 +108,10 @@ class FieldExtractionTestPanel extends Component {
     const { path } = this.props;
     const { results, logs, cachedLogs, disableTest } = this.state;
     var jsonResults;
-
-    if(results) {
+    if(disableTest) {
+      jsonResults = <LoadingSpinner />
+    }
+    else if(results) {
       if(results.extracted) {
         jsonResults =
           <fieldset className="jsonResults">
@@ -133,11 +135,7 @@ class FieldExtractionTestPanel extends Component {
           </fieldset>
       }
     }
-    else {
-      if(disableTest) {
-        jsonResults = <LoadingSpinner />
-      }
-    }
+
     return (
       <>
         <Form inline autoComplete="off" className="morphlineMenuBarForm testBar">
