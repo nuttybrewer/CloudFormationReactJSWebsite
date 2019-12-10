@@ -64,6 +64,11 @@ class LogSelector extends React.Component {
   }
 
   updateCurrLogValue(event) {
+    const { currLogKey} = this.state;
+    const { updateLogValue } = this.props;
+    if( currLogKey) {
+      updateLogValue(currLogKey, event.target.value);
+    }
     this.setState({ currLogValue: event.target.value});
   }
 

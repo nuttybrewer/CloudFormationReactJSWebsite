@@ -17,6 +17,7 @@ class FieldExtractionTestPanel extends Component {
     this.addCachedLog = this.addCachedLog.bind(this);
     this.removeLog = this.removeLog.bind(this);
     this.removeCachedLog = this.removeCachedLog.bind(this);
+    this.updateLogValue = this.updateLogValue.bind(this);
     this.state = {
       results: null,
       logs: {},
@@ -80,7 +81,18 @@ class FieldExtractionTestPanel extends Component {
     const { logs } = this.state;
     if(logkey && logvalue) {
       logs[logkey] = logvalue;
-      return this.setState({ logs: logs })
+      return this.setState({ logs: Object.assign({}, logs)});
+      //return this.setState({ logs: logs })
+    }
+  }
+
+  updateLogValue(logkey, logvalue) {
+    const { logs } = this.state;
+    if(logkey && logvalue) {
+      if(logs[logkey]) {
+        logs[logkey] = logvalue;
+        return this.setState({ logs: Object.assign({}, logs)});
+      }
     }
   }
 
@@ -143,6 +155,7 @@ class FieldExtractionTestPanel extends Component {
           addCachedLog={this.addCachedLog}
           removeCachedLog={this.removeCachedLog}
           addLog={this.addLog}
+          updateLogValue={this.updateLogValue}
           removeLog={this.removeLog}
           disabled={disableTest}
         />
