@@ -64,7 +64,7 @@ class FieldExtractionBranchList extends Component {
             <InputGroup.Prepend>
               <InputGroup.Text id="libBranch">Branch</InputGroup.Text>
             </InputGroup.Prepend>
-            <Form.Control as="select" onChange={this.selectBranch.bind(this)} ref={ el => this.inputEl=el } defaultValue={repoBranch}>
+            <Form.Control disabled as="select" onChange={this.selectBranch.bind(this)} ref={ el => this.inputEl=el } defaultValue={repoBranch}>
               {branchItems}
             </Form.Control>
           </InputGroup>

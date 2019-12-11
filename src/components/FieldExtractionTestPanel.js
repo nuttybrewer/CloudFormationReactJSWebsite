@@ -114,8 +114,7 @@ class FieldExtractionTestPanel extends Component {
     else if(results) {
       if(results.extracted) {
         jsonResults =
-          <fieldset className="jsonResults">
-            <legend className="resultLabel">Results</legend>
+          <div className="jsonResultDiv">
             <ReactJson
               src={results.extracted}
               collapseStringsAfterLength="80"
@@ -123,16 +122,15 @@ class FieldExtractionTestPanel extends Component {
               collapsed="2"
               className="jsonResults"
             />
-          </fieldset>
+        </div>
       }
       else {
         jsonResults =
-          <fieldset className="jsonResults">
-            <legend className="errorLabel">Error</legend>
+          <div className="jsonResultDiv">
             <ReactJson
               src={{message: results.message, statusCode: results.statusCode}}
               className="jsonResults"/>
-          </fieldset>
+          </div>
       }
     }
 

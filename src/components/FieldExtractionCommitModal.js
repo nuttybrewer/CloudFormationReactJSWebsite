@@ -105,8 +105,11 @@ class FieldExtractionCommitModal extends React.Component {
                 </fieldset>
                 <Form.Group controlId="textArea">
                   <Form.Label>Commit Message</Form.Label>
-                  <Form.Control as="textarea" rows="3" onChange={this.onMessageChange}/>
-                  </Form.Group>
+                  <Form.Control required as="textarea" rows="3" onChange={this.onMessageChange}/>
+                  <Form.Control.Feedback type="invalid">
+                    A message is required
+                  </Form.Control.Feedback>
+                </Form.Group>
               </Form>
           </Modal.Body>
         <Modal.Footer>

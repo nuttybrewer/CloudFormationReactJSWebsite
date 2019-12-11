@@ -3,6 +3,7 @@ import {Tabs, Tab, Button, ButtonGroup, Dropdown} from 'react-bootstrap';
 // import util from 'util';
 import SplitPane from 'react-split-pane';
 import axios from 'axios';
+import crypto from 'crypto';
 
 import ini from '../utils/ini';
 import './FieldExtractionTopConfig.css';
@@ -16,6 +17,8 @@ import FieldExtractionNewSectionModal from './FieldExtractionNewSectionModal';
 import FieldExtractionTestPanel from './FieldExtractionTestPanel';
 
 import LoadingSpinner from './LoadingSpinner';
+
+
 
 // data: {
 //   decoded: <decoded content for getContents() below>
@@ -43,6 +46,8 @@ class FieldExtractionTopConfig extends Component {
     this.removeSection = this.removeSection.bind(this);
     this.addVendor = this.addVendor.bind(this);
     this.addSection = this.addSection.bind(this);
+    this.enableCommit = this.enableCommit.bind(this);
+    this.hasChanged = this.enableCommit.bind(this);
 
     this.state = {
       data: {},
@@ -70,6 +75,28 @@ class FieldExtractionTopConfig extends Component {
     }
   }
 
+  getChangedContents(files) {
+    const { data } = this.state;
+
+    if (! files || files.length === 0) {
+      return new Promise((resolve) => resolve());
+    }
+    return new Promise((resolve, reject) => {
+      const path = files.pop();
+      console.log(`Refreshing object ${JSON.stringify(path)}`);
+      return this.getContents(path, data[path].type)
+      .then(() => {
+        if(files.length > 0) {
+          this.getChangedContents(files);
+        }
+        resolve();
+      })
+      .catch(error => {
+        reject(error);
+      });
+    });
+  }
+
   // Loads files from Github into the data state variable
   getContents(path, type) {
     const { client, reponame, owner, branch } = this.props;
@@ -77,13 +104,16 @@ class FieldExtractionTopConfig extends Component {
     return new Promise((resolve, reject) => {
       // Check if the ini file is already in the data structure
       if(data[path]) {
-        return resolve({decoded: data[path].decoded, raw: data[path].raw, path: path})
+        if(data[path].deleted) {
+          return resolve({decoded: data[path].decoded, raw: data[path].raw, path: path})
+        }
       }
       if(reponame && branch) {
         client.repos.getContents({owner: owner, repo: reponame, ref: branch, path: path})
         .then(raw => {
           var content = null;
           var decodedContent = null;
+
           if (raw.data.size < 100000 && raw.data.encoding === 'base64'){
             content = raw.data.content;
             decodedContent = new Buffer(raw.data.content, 'base64').toString('ascii');
@@ -91,8 +121,20 @@ class FieldExtractionTopConfig extends Component {
           else {
             console.log("Not decoding, size too big: " + raw.data.size );
           }
-          data[path] = { raw: content, decoded: decodedContent, sha: raw.data.sha, type: type, changed: false, vcs: 'github'}
-          this.setState({data: data});
+          // Hash function
+          const hash = crypto.createHash('sha1');
+          const hashedData = hash.update(decodedContent);
+          data[path] = {
+            raw: content,
+            decoded: decodedContent,
+            sha: raw.data.sha,
+            type: type,
+            changed: false,
+            vcs: 'github',
+            origHash: hashedData.digest('hex')
+          };
+          console.log(`Refreshed ${path}`);
+          this.setState({data: Object.assign({}, data)});
           return resolve({ decoded: decodedContent, raw: raw.data.content, path: path});
         }).catch(error => {
           return reject(error);
@@ -194,8 +236,8 @@ class FieldExtractionTopConfig extends Component {
     return axios.post('/api/hcon', postMorphline);
   }
 
-  submitCommit(changedfiles = null, deletedfiles = null, message = null) {
-    this.setState({showCommitModal: false});
+  submitCommit(changedfiles = null, deletedfiles = null, message = "No message provided") {
+    this.setState({showCommitModal: false, disableCommit: true});
     const { data } = this.state;
     // console.log("Submit Commit clicked")
     return new Promise((resolve, reject) => {
@@ -209,14 +251,24 @@ class FieldExtractionTopConfig extends Component {
               }
             })
             this.setState({
-              data: Object.assign({}, data)
-            })
-            resolve()
+              data: Object.assign({}, data),
+              disableCommit: false
+            });
+            this.getChangedContents(changedfiles)
+            .then(resolve())
+            .catch((e) => {
+              console.log("Error refreshing content: " + e.message);
+              reject(e);
+            });
           })
-          .catch((e) => {console.log("deleteContents failed: " + e.message); reject(e)})
+          .catch((e) => {
+            console.log("deleteContents failed: " + e.message);
+            this.setState({disableCommit: false});
+            reject(e)})
         })
         .catch((error) => {
           console.log("commitContents failed: " + error.message);
+          this.setState({disableCommit: false});
           reject(error);
         });
     });
@@ -265,7 +317,7 @@ class FieldExtractionTopConfig extends Component {
   }
 
   commitContents(files, message) {
-    this.setState({showCommitModal: false});
+    // this.setState({showCommitModal: false});
     const { client, reponame, owner, branch } = this.props;
     const { data } = this.state;
 
@@ -420,15 +472,24 @@ class FieldExtractionTopConfig extends Component {
       return;
     }
     ini.removeInclude(iniConfig, selectedSource).then((obj) => {
+      console.log(`Removing source ${selectedSource}`);
       data[selectedSource].decoded = null;
       data[selectedSource].raw = null;
       data[selectedSource].changed = false;
-      data[selectedSource].deleted = true;
+      // if(data[selectedSource].origHash) {
+        data[selectedSource].deleted = true;
+      // }
 
       // Re-render top level config
       data['fieldextraction.properties.allextractors.web'].decoded = ini.deserialize(iniConfig, {source: 'fieldextraction.properties.allextractors.web'}).data;
-      data['fieldextraction.properties.allextractors.web'].changed = true;
-
+      const topHash = crypto.createHash('sha1');
+      const topHashData = topHash.update(data['fieldextraction.properties.allextractors.web'].decoded);
+      if(data['fieldextraction.properties.allextractors.web'].origHash === topHashData.digest('hex')) {
+        data['fieldextraction.properties.allextractors.web'].changed = false;
+      }
+      else {
+        data['fieldextraction.properties.allextractors.web'].changed = true;
+      }
       this.setState({
           data: Object.assign({}, data),
           iniConfig: Object.assign({}, obj),
@@ -447,11 +508,13 @@ class FieldExtractionTopConfig extends Component {
         if(selectedSource) {
           data[selectedSource].decoded = ini.deserialize(newIniConfig, {source: selectedSource}).data;
           data[selectedSource].changed = true;
+
           if(configFile) {
             data[configFile].decoded = null;
             data[configFile].deleted = true;
           }
         }
+
         this.setState({
           iniConfig: Object.assign({}, newIniConfig),
           selectedSource: selectedSource,
@@ -603,6 +666,48 @@ class FieldExtractionTopConfig extends Component {
     });
   }
 
+
+  hasChanged(path) {
+    const { data } = this.state;
+    console.log(`Inspecting ${path}`);
+
+    // Check if this is a downloaded file that has deleted
+    if(data[path].origHash && data[path].deleted) {
+      console.log(`${path} has been deleted`);
+      return path;
+    }
+
+    // Check if this is a downloaded file that has  been changed
+    if(data[path].origHash) {
+      // If the content is empty
+      if(!data[path].decoded) {
+        return path;
+      }
+      if(data[path].origHash && data[path].deleted) {
+        return path;
+      }
+      const pathHash = crypto.createHash('sha1');
+      const pathHashData = pathHash.update(data[path].decoded);
+      if(data[path].origHash !== pathHashData.digest('hex')) {
+        return path;
+      }
+    }
+    // Check if this is a new file that hasn't been deleted
+    if (data[path].decoded && !data[path].deleted)  {
+      return path;
+    }
+  }
+  enableCommit() {
+    console.log("Calling enableCommit");
+    const { data, disableCommit} = this.state;
+    if (disableCommit) {
+      console.log("disableCommit set");
+      return true;
+    }
+    const firstChange = Object.keys(data).find(this.hasChanged);
+    if(firstChange) return true;
+    return false;
+  }
   // <FieldExtractionNewVendorModal show={ showVendor } onClose={this.addVendor}/>
   // <Button size="sm" disabled={!addEnabled} onClick={() => this.onAddClicked()}>Add</Button>
   // <Button size="sm" disabled={!removeEnabled} onClick={() => this.onRemoveClicked()}>Remove</Button>
@@ -616,6 +721,7 @@ class FieldExtractionTopConfig extends Component {
       selectedSection,
       selectedData,
       showCommitModal,
+      disableCommit,
       data,
       showAddVendor,
       showAddSection
@@ -687,7 +793,9 @@ class FieldExtractionTopConfig extends Component {
       const activateEnabled = selectedSection && !ini.isActiveExtractor(iniConfig, selectedSection);
       const deactivateEnabled = selectedSection && ini.isActiveExtractor(iniConfig, selectedSection);
       const firstChangedSource = Object.keys(data).find((sourcePath) => data[sourcePath].changed === true);
-      const commitEnabled = (firstChangedSource ? true : false);
+      const commitEnabled = (firstChangedSource ? true : false) && !disableCommit;
+      // const commitEnabled = this.enableCommit();
+      console.log(`Commit Enabled ${commitEnabled}`);
       return (
         <div>
           <SplitPane defaultSize="20%" split="vertical">
@@ -732,8 +840,27 @@ class FieldExtractionTopConfig extends Component {
             {configDisplay}
           </SplitPane>
           <FieldExtractionCommitModal
-            changedfiles={Object.keys(data).filter((itemKey) => { return data[itemKey].changed })}
-            deletedfiles={Object.keys(data).filter((itemKey) => data[itemKey].deleted)}
+            changedfiles={Object.keys(data).filter((itemKey) => {
+              if (data[itemKey].origHash && data[itemKey].decoded) {
+                // Hash function
+                const hash = crypto.createHash('sha1');
+                const newHash = hash.update(data[itemKey].decoded);
+                if (newHash.digest('hex') === data[itemKey].origHash) {
+                  return false;
+                }
+              }
+              if (data[itemKey].deleted) {
+                return false;
+              }
+              return data[itemKey].changed
+            })}
+            deletedfiles={Object.keys(data).filter((itemKey) => {
+                if(data[itemKey].origHash && data[itemKey].deleted) {
+                  return true
+                }
+                return false;
+              })
+            }
             show={showCommitModal}
             onCancel={this.onCloseCommitModal}
             onSubmit= {this.submitCommit}/>

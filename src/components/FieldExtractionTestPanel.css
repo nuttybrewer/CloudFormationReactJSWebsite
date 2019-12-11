@@ -11,6 +11,18 @@
   margin-right: 5px;
 }
 
+.jsonResultDiv {
+  border-radius: 5px;
+  border: 2px solid;
+  border-color: #a5c7e3 !important;
+  margin: 5px;
+  padding: 2px;
+  overflow: auto;
+  height: 45vh;
+  width: 99%;
+}
+
+/*
 .jsonResults {
   border-radius: 5px;
   border: 2px solid;
@@ -21,6 +33,7 @@
   height: 80vh;
   max-width: 99%;
 }
+*/
 
 .resultLabel {
   width: auto;
@@ -35,7 +48,11 @@
   color: red;
 }
 
+.Pane2 {
+  max-width: 100%;
+}
+
 .react-json-view {
-  width: 600px;
-  overflow: scroll;
+  width: 800px;
+  overflow: auto;
 }
